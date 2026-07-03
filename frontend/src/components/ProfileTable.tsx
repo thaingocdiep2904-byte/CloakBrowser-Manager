@@ -85,7 +85,6 @@ export function ProfileTable({
   const [search, setSearch] = useState("");
   const [groupFilter, setGroupFilter] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
-  const [resizeAllowed, setResizeAllowed] = useState(false);
 
   const [proxyCheckStates, setProxyCheckStates] = useState<Record<string, {
     checking: boolean;
@@ -546,19 +545,6 @@ export function ProfileTable({
             </button>
           </div>
 
-          {/* Checkbox resize ngoài giới hạn */}
-          <label className={`flex items-center gap-2 cursor-pointer text-gray-400 hover:text-white select-none ${
-            selectedIds.length === 0 ? "opacity-40 cursor-not-allowed pointer-events-none" : ""
-          }`}>
-            <input
-              type="checkbox"
-              checked={resizeAllowed}
-              disabled={selectedIds.length === 0}
-              onChange={(e) => setResizeAllowed(e.target.checked)}
-              className="rounded border-gray-600 bg-surface-3 text-accent focus:ring-accent w-3.5 h-3.5"
-            />
-            <span>Cho phép resize cửa sổ quá giới hạn cho phép</span>
-          </label>
         </div>
 
         {/* Hàng 2: Tất cả các nút cấu hình phụ (Copy, Proxy, Bookmark, Extension, v.v.) */}
