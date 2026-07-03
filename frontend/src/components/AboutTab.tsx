@@ -1,14 +1,18 @@
 import { Info, Shield, CheckCircle, Heart } from "lucide-react";
 import logoImg from "../logo.png";
+import { useLanguage } from "../lib/i18n";
 
 export function AboutTab() {
+  const { lang } = useLanguage();
   return (
     <div className="flex-1 bg-surface-0 overflow-y-auto p-6 text-gray-200">
       {/* Top Header */}
       <div className="flex items-center justify-between border-b border-border pb-4 mb-6">
         <div className="flex items-center gap-2">
           <Info className="h-5 w-5 text-primary" />
-          <h1 className="text-xl font-bold text-white tracking-wide">Giới thiệu</h1>
+          <h1 className="text-xl font-bold text-white tracking-wide">
+            {lang === "vi" ? "Giới thiệu" : "About"}
+          </h1>
         </div>
       </div>
 
@@ -19,14 +23,17 @@ export function AboutTab() {
           <div>
             <h2 className="text-2xl font-extrabold text-white tracking-tight">CloakBrowser Manager</h2>
             <p className="text-xs text-gray-400 mt-1 max-w-lg">
-              Hệ thống quản lý profile trình duyệt antidetect, bảo mật dấu vân tay số và tự động hóa đa tài khoản chuyên nghiệp.
+              {lang === "vi" 
+                ? "Hệ thống quản lý profile trình duyệt antidetect, bảo mật dấu vân tay số và tự động hóa đa tài khoản chuyên nghiệp."
+                : "Anti-detect browser profile manager, protecting digital fingerprint and professional multi-account automation."
+              }
             </p>
             <div className="flex items-center gap-3 mt-4 text-[11px] text-gray-500">
               <span className="bg-surface-2 border border-border px-2 py-0.5 rounded font-mono text-gray-300">v1.2.0 Stable</span>
               <span>•</span>
               <span className="flex items-center gap-1 text-green-400">
                 <CheckCircle className="h-3 w-3" />
-                <span>Bản quyền vĩnh viễn</span>
+                <span>{lang === "vi" ? "Bản quyền vĩnh viễn" : "Lifetime License"}</span>
               </span>
             </div>
           </div>
@@ -36,33 +43,48 @@ export function AboutTab() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="bg-surface-1 border border-border p-5 rounded-lg space-y-2 hover:border-primary/30 transition-all">
             <Shield className="h-5 w-5 text-primary" />
-            <h3 className="text-sm font-semibold text-white">Chống dấu vân tay (Antidetect)</h3>
+            <h3 className="text-sm font-semibold text-white">
+              {lang === "vi" ? "Chống dấu vân tay (Antidetect)" : "Digital Fingerprint Protection"}
+            </h3>
             <p className="text-xs text-gray-400 leading-relaxed">
-              Ngăn chặn theo dõi qua Canvas, WebGL, Audio, ClientRects, WebRTC, GeoIP, và User-Agent. Mỗi profile là một dấu vân tay độc bản.
+              {lang === "vi"
+                ? "Ngăn chặn theo dõi qua Canvas, WebGL, Audio, ClientRects, WebRTC, GeoIP, và User-Agent. Mỗi profile là một dấu vân tay độc bản."
+                : "Prevent tracking via Canvas, WebGL, Audio, ClientRects, WebRTC, GeoIP, and User-Agent. Every profile is a unique digital footprint."
+              }
             </p>
           </div>
 
           <div className="bg-surface-1 border border-border p-5 rounded-lg space-y-2 hover:border-primary/30 transition-all">
             <CheckCircle className="h-5 w-5 text-green-400" />
-            <h3 className="text-sm font-semibold text-white">Chạy trực tiếp & CDP</h3>
+            <h3 className="text-sm font-semibold text-white">
+              {lang === "vi" ? "Chạy trực tiếp & CDP" : "Native Run & CDP Automation"}
+            </h3>
             <p className="text-xs text-gray-400 leading-relaxed">
-              Trình duyệt khởi chạy trực tiếp trên máy thật với tốc độ cao nhất, đồng thời mở cổng CDP để tự động hóa bằng script Playwright/Puppeteer.
+              {lang === "vi"
+                ? "Trình duyệt khởi chạy trực tiếp trên máy thật với tốc độ cao nhất, đồng thời mở cổng CDP để tự động hóa bằng script Playwright/Puppeteer."
+                : "Browser launches natively on real hardware for maximum performance, exposing CDP port for automation via Playwright/Puppeteer scripts."
+              }
             </p>
           </div>
         </div>
 
         {/* Binary License Information */}
         <div className="bg-surface-1 border border-border p-6 rounded-lg space-y-3">
-          <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Thông tin bản quyền & Bản quyền nhị phân</h3>
+          <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+            {lang === "vi" ? "Thông tin bản quyền & Bản quyền nhị phân" : "Copyright & Binary Licensing"}
+          </h3>
           <p className="text-xs text-gray-400 leading-relaxed">
-            Phần mềm được cung cấp dưới dạng giấy phép độc quyền thương mại của CloakBrowser Team. Vui lòng không sao chép trái phép, dịch ngược hoặc phân phối lại dưới bất kỳ hình thức nào.
+            {lang === "vi"
+              ? "Phần mềm được cung cấp dưới dạng giấy phép độc quyền thương mại của CloakBrowser Team. Vui lòng không sao chép trái phép, dịch ngược hoặc phân phối lại dưới bất kỳ hình thức nào."
+              : "This software is licensed under commercial terms by the CloakBrowser Team. Unauthorized copying, reverse engineering, or redistribution is strictly prohibited."
+            }
           </p>
           <div className="pt-2">
             <a
               href="file:///d:/APP/CloakBrowser/CloakBrowser-Manager/BINARY-LICENSE.md"
               className="text-xs text-primary hover:underline font-semibold"
             >
-              Đọc BINARY-LICENSE.md
+              {lang === "vi" ? "Đọc BINARY-LICENSE.md" : "Read BINARY-LICENSE.md"}
             </a>
           </div>
         </div>

@@ -16,6 +16,7 @@ import { SettingsTab } from "./components/SettingsTab";
 import { ApiTab } from "./components/ApiTab";
 import { AboutTab } from "./components/AboutTab";
 import { RecycleBinDialog } from "./components/RecycleBinDialog";
+import { useLanguage, i18n } from "./lib/i18n";
 import logoImg from "./logo.png";
 
 type AuthState = "checking" | "required" | "ok" | "error";
@@ -99,6 +100,7 @@ interface AppContentProps {
 }
 
 function AppContent({ authRequired, onLogout }: AppContentProps) {
+  const { t } = useLanguage();
   const { profiles, loading, error, refresh, create, update, remove, launch, stop, bulkLaunch, bulkStop, bulkDelete, bulkCreate } = useProfiles();
   const [activeTab, setActiveTab] = useState<Tab>("profiles");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -112,6 +114,9 @@ function AppContent({ authRequired, onLogout }: AppContentProps) {
     api.getSettings()
       .then((s) => {
         setUseTrash(!s.no_trash);
+        if (s.language) {
+          i18n.setLang(s.language as any);
+        }
       })
       .catch((err) => console.error("Failed to load settings in AppContent:", err));
   }, [activeTab]);
@@ -305,10 +310,10 @@ function AppContent({ authRequired, onLogout }: AppContentProps) {
               ? "bg-primary text-white shadow-lg shadow-primary/20"
               : "text-gray-400 hover:text-white hover:bg-surface-3"
           }`}
-          title="Quản lý Profiles"
+          title={t("menu.profiles")}
         >
           <Monitor className="h-4 w-4 flex-shrink-0" />
-          <span>Quản lý Profile</span>
+          <span>{t("menu.profiles")}</span>
         </button>
 
         {/* Tab 2: Settings */}
@@ -319,10 +324,10 @@ function AppContent({ authRequired, onLogout }: AppContentProps) {
               ? "bg-primary text-white shadow-lg shadow-primary/20"
               : "text-gray-400 hover:text-white hover:bg-surface-3"
           }`}
-          title="Quản lý Settings"
+          title={t("menu.settings")}
         >
           <Settings className="h-4 w-4 flex-shrink-0" />
-          <span>Cài đặt hệ thống</span>
+          <span>{t("menu.settings")}</span>
         </button>
 
         {/* Tab 3: API */}
@@ -333,10 +338,10 @@ function AppContent({ authRequired, onLogout }: AppContentProps) {
               ? "bg-primary text-white shadow-lg shadow-primary/20"
               : "text-gray-400 hover:text-white hover:bg-surface-3"
           }`}
-          title="Tài liệu API Playwright"
+          title={t("menu.api")}
         >
           <Terminal className="h-4 w-4 flex-shrink-0" />
-          <span>Tài liệu & API</span>
+          <span>{t("menu.api")}</span>
         </button>
 
         {/* Tab 4: About */}
@@ -347,10 +352,10 @@ function AppContent({ authRequired, onLogout }: AppContentProps) {
               ? "bg-primary text-white shadow-lg shadow-primary/20"
               : "text-gray-400 hover:text-white hover:bg-surface-3"
           }`}
-          title="Giới thiệu"
+          title={t("menu.about")}
         >
           <Info className="h-4 w-4 flex-shrink-0" />
-          <span>Giới thiệu</span>
+          <span>{t("menu.about")}</span>
         </button>
 
         {/* Nút đăng xuất nếu có yêu cầu auth */}
@@ -358,10 +363,10 @@ function AppContent({ authRequired, onLogout }: AppContentProps) {
           <button
             onClick={onLogout}
             className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all w-full text-rose-400 hover:text-white hover:bg-rose-600/20 mt-auto border border-rose-500/20"
-            title="Đăng xuất khỏi hệ thống"
+            title={t("menu.logout")}
           >
             <Lock className="h-4 w-4 flex-shrink-0" />
-            <span>Đăng xuất</span>
+            <span>{t("menu.logout")}</span>
           </button>
         )}
       </div>

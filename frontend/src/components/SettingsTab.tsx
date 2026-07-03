@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
 import { RotateCw, Save, AlertTriangle, Puzzle, Trash2, Upload, Loader2 } from "lucide-react";
 import { api, type AppSettings, type Extension } from "../lib/api";
+import { useLanguage } from "../lib/i18n";
 
 interface SettingsTabProps {
   showFeedback?: (msg: string) => void;
 }
 
 export function SettingsTab({ showFeedback }: SettingsTabProps) {
+  const { t, setLang } = useLanguage();
   const [settings, setSettings] = useState<AppSettings>({
     profile_path: "",
     compression_mode: "default",
@@ -148,12 +150,15 @@ export function SettingsTab({ showFeedback }: SettingsTabProps) {
     setSaving(true);
     try {
       await api.updateSettings(settings);
+      if (settings.language) {
+        setLang(settings.language as any);
+      }
       if (showFeedback) {
-        showFeedback("Đã lưu cài đặt thành công!");
+        showFeedback(t("settings_tab.save") + "!");
       }
     } catch (err) {
       if (showFeedback) {
-        showFeedback("Lỗi khi lưu cài đặt: " + (err instanceof Error ? err.message : String(err)));
+        showFeedback(t("settings_tab.save") + " failed: " + (err instanceof Error ? err.message : String(err)));
       }
     } finally {
       setSaving(false);
@@ -263,7 +268,7 @@ export function SettingsTab({ showFeedback }: SettingsTabProps) {
           <h2 className="text-xs font-bold uppercase tracking-wider text-gray-400">Cài đặt chung</h2>
 
           <div className="flex items-center gap-3">
-            <span className="text-xs font-semibold text-gray-400 w-24">Ngôn ngữ</span>
+            <span className="text-xs font-semibold text-gray-400 w-24">{t("settings_tab.language")}</span>
             <div className="flex items-center gap-4">
               <button
                 onClick={() => setSettings((prev) => ({ ...prev, language: "en" }))}
@@ -273,20 +278,12 @@ export function SettingsTab({ showFeedback }: SettingsTabProps) {
                 <span className="text-xl">🇺🇸</span>
               </button>
               <button
-                onClick={() => setSettings((prev) => ({ ...prev, language: "cn" }))}
-                className={`p-1 rounded transition-all ${settings.language === "cn" ? "bg-primary/20 border border-primaryScale-500 scale-110" : "opacity-50 hover:opacity-100"}`}
-                title="Chinese"
-              >
-                <span className="text-xl">🇨🇳</span>
-              </button>
-              <button
                 onClick={() => setSettings((prev) => ({ ...prev, language: "vi" }))}
                 className={`p-1 rounded transition-all ${settings.language === "vi" ? "bg-primary/20 border border-primaryScale-500 scale-110" : "opacity-50 hover:opacity-100"}`}
                 title="Tiếng Việt"
               >
                 <span className="text-xl">🇻🇳</span>
               </button>
-              <span className="text-[11px] text-red-400 ml-2">Restart to full applied</span>
             </div>
           </div>
 

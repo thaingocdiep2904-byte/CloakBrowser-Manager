@@ -245,7 +245,7 @@ class AppSettings(BaseModel):
     profile_path: str | None = None
     compression_mode: Literal["default", "7z"] | None = "default"
     license_key: str | None = "CLOAK-XXXX-XXXX-XXXX"
-    language: Literal["en", "cn", "vi"] | None = "vi"
+    language: Literal["en", "vi"] | None = "vi"
     storage_type: Literal["local", "s3"] | None = "local"
     theme: Literal["light", "dark"] | None = "dark"
     reopen_tabs: bool | None = False

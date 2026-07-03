@@ -1,6 +1,7 @@
 import { Save, Trash2, X, RefreshCw, Layers } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { Profile, ProfileCreateData } from "../lib/api";
+import { useLanguage } from "../lib/i18n";
 
 interface ProfileFormProps {
   profile: Profile | null; // null = create mode
@@ -95,6 +96,7 @@ const generateRandomMac = () => {
 };
 
 export function ProfileForm({ profile, onSave, onDelete }: ProfileFormProps) {
+  const { t } = useLanguage();
   const isEdit = profile !== null;
 
   const [activeTab, setActiveTab] = useState<"quick" | "conn" | "soft" | "hard">("quick");
@@ -323,7 +325,7 @@ export function ProfileForm({ profile, onSave, onDelete }: ProfileFormProps) {
       <div className="flex items-center justify-between mb-5 border-b border-border/80 pb-4">
         <div className="flex items-center gap-2">
           <h2 className="text-base font-bold text-white uppercase tracking-wide">
-            {isEdit ? "Cấu Hình Profile" : "Tạo Profile Mới"}
+            {isEdit ? t("form.edit_title") : t("form.create_title")}
           </h2>
           {isEdit && onDelete && (
             <button
@@ -333,14 +335,14 @@ export function ProfileForm({ profile, onSave, onDelete }: ProfileFormProps) {
               className="btn-danger flex items-center gap-1.5 px-3 py-1 rounded text-[11px]"
             >
               <Trash2 className="h-3.5 w-3.5" />
-              <span>{deleting ? "Đang xóa..." : "Xóa Profile"}</span>
+              <span>{deleting ? t("form.saving") : t("action.delete")}</span>
             </button>
           )}
         </div>
         <div className="flex items-center gap-2 mr-8">
           <button type="submit" disabled={saving} className="px-4 py-1.5 rounded bg-accent hover:bg-accent/90 text-white transition-colors font-medium flex items-center gap-1.5">
             <Save className="h-3.5 w-3.5" />
-            <span>{saving ? "Đang lưu..." : isEdit ? "Lưu lại" : "Tạo Profile"}</span>
+            <span>{saving ? t("form.saving") : t("form.save")}</span>
           </button>
         </div>
       </div>

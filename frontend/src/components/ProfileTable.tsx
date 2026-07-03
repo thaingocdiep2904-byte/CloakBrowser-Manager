@@ -27,6 +27,7 @@ import {
   ChevronDown
 } from "lucide-react";
 import { api, type Profile } from "../lib/api";
+import { useLanguage } from "../lib/i18n";
 import { StatusIndicator } from "./StatusIndicator";
 import { ImportCookiesDialog } from "./ImportCookiesDialog";
 import { ExtensionDialog } from "./ExtensionDialog";
@@ -80,6 +81,7 @@ export function ProfileTable({
   useTrash = true,
   onOpenRecycleBin,
 }: ProfileTableProps) {
+  const { t } = useLanguage();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [lastClickedIndex, setLastClickedIndex] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -441,7 +443,7 @@ export function ProfileTable({
 
           <button onClick={() => handleBulkAction("grid_layout")} className="btn-menu bg-surface-3 hover:bg-surface-4 border border-border text-gray-200 py-1.5 px-3 text-xs rounded font-medium flex items-center gap-1.5 transition-colors" title="Sắp xếp lưới tất cả cửa sổ trình duyệt đang chạy">
             <LayoutGrid className="h-3.5 w-3.5 text-cyan-500" />
-            <span>Sắp xếp cửa sổ trình duyệt</span>
+            <span>{t("table.arrange")}</span>
           </button>
         </div>
       </div>
@@ -454,7 +456,7 @@ export function ProfileTable({
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-500" />
             <input
               type="text"
-              placeholder="Tìm kiếm theo tên profile..."
+              placeholder={t("table.search_placeholder")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-8 pr-3 h-8 bg-surface-2 border border-border rounded text-white text-xs focus:outline-none focus:border-border-hover focus:ring-1 focus:ring-accent/30 placeholder-gray-500"
@@ -511,7 +513,7 @@ export function ProfileTable({
               <X className="h-4 w-4" />
             </button>
             <span className="font-semibold text-gray-200">
-              Đã chọn <strong className="text-accent text-sm">{selectedIds.length}</strong> profiles
+              {t("table.selected_count", { count: selectedIds.length })}
             </span>
             <div className="h-3 w-px bg-border mx-1"></div>
             
@@ -525,7 +527,7 @@ export function ProfileTable({
                 }`}
               >
                 <Play className="h-3.5 w-3.5" />
-                <span>Mở</span>
+                <span>{t("table.open")}</span>
               </button>
             )}
             <button
@@ -536,7 +538,7 @@ export function ProfileTable({
               }`}
             >
               <Square className="h-3.5 w-3.5" />
-              <span>Đóng</span>
+              <span>{t("table.close")}</span>
             </button>
             <div className="relative group">
               <button
@@ -546,7 +548,7 @@ export function ProfileTable({
                 }`}
               >
                 <LayoutGrid className="h-3.5 w-3.5 text-violet-400" />
-                <span>Sắp xếp</span>
+                <span>{t("table.arrange")}</span>
                 <ChevronDown className="h-3 w-3 opacity-60" />
               </button>
               <div className="absolute left-0 mt-1 hidden group-hover:block bg-surface-1 border border-border rounded-lg shadow-xl py-1 z-30 min-w-[140px] transition-all">
@@ -555,14 +557,14 @@ export function ProfileTable({
                   className="w-full text-left px-3 py-1.5 hover:bg-surface-2 text-xs text-gray-300 hover:text-white transition-colors flex items-center gap-1.5"
                 >
                   <LayoutGrid className="h-3.5 w-3.5 text-violet-400" />
-                  <span>Dạng lưới (Grid)</span>
+                  <span>{t("table.arrange_grid")}</span>
                 </button>
                 <button
                   onClick={() => handleBulkAction("cascade_layout")}
                   className="w-full text-left px-3 py-1.5 hover:bg-surface-2 text-xs text-gray-300 hover:text-white transition-colors flex items-center gap-1.5"
                 >
                   <Layers className="h-3.5 w-3.5 text-blue-400" />
-                  <span>Xếp tầng (Cascade)</span>
+                  <span>{t("table.arrange_cascade")}</span>
                 </button>
               </div>
             </div>
@@ -574,7 +576,7 @@ export function ProfileTable({
               }`}
             >
               <Trash2 className="h-3.5 w-3.5 text-rose-400" />
-              <span>Xóa</span>
+              <span>{t("table.delete")}</span>
             </button>
           </div>
 
@@ -690,21 +692,21 @@ export function ProfileTable({
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-gray-500 text-sm gap-2">
             <Info className="h-8 w-8 text-gray-600" />
-            <span>Không tìm thấy profile nào phù hợp.</span>
+            <span>{t("table.no_profiles")}</span>
           </div>
         ) : (
           <table className="w-full text-left border-collapse text-xs">
             <thead>
               <tr className="border-b border-border text-gray-400 font-semibold bg-surface-1 sticky top-0 z-10">
-                <th className="py-3 px-4">Tên profile</th>
-                <th className="py-3 px-4 w-32">Nhóm</th>
-                <th className="py-3 px-4 w-20">OS</th>
+                <th className="py-3 px-4">{t("table.col_name")}</th>
+                <th className="py-3 px-4 w-32">Group</th>
+                <th className="py-3 px-4 w-20">{t("table.col_os")}</th>
                 <th className="py-3 px-4 w-24">Storage</th>
-                <th className="py-3 px-4 w-28">Trạng thái</th>
+                <th className="py-3 px-4 w-28">Status</th>
                 <th className="py-3 px-4">Proxy IP</th>
-                <th className="py-3 px-4 w-32">Lần chạy cuối</th>
-                <th className="py-3 px-4">Ghi chú</th>
-                <th className="py-3 px-4 w-36 text-right">Thao tác</th>
+                <th className="py-3 px-4 w-32">{t("table.col_last_run")}</th>
+                <th className="py-3 px-4">{t("table.col_notes")}</th>
+                <th className="py-3 px-4 w-36 text-right">{t("table.col_action")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/40">

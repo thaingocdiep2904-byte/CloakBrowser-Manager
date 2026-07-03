@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { X, Trash2, RotateCcw, Laptop, Search, AlertCircle, Loader2, CheckCircle2 } from "lucide-react";
 import { api, type Profile } from "../lib/api";
+import { useLanguage } from "../lib/i18n";
 
 interface RecycleBinDialogProps {
   onCancel: () => void;
@@ -50,6 +51,7 @@ const defaultConfirm: ConfirmState = {
 };
 
 export function RecycleBinDialog({ onCancel, onRefreshProfiles, showFeedback }: RecycleBinDialogProps) {
+  const { t } = useLanguage();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -296,7 +298,7 @@ export function RecycleBinDialog({ onCancel, onRefreshProfiles, showFeedback }: 
                 onClick={closeConfirm}
                 className="px-4 py-1.5 rounded bg-surface-3 hover:bg-surface-4 border border-border text-gray-300 font-medium transition-colors text-xs"
               >
-                Hủy bỏ
+                {t("form.cancel")}
               </button>
               <button
                 onClick={confirmState.onConfirm}
@@ -318,7 +320,7 @@ export function RecycleBinDialog({ onCancel, onRefreshProfiles, showFeedback }: 
           <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-surface-2 relative">
             <div className="flex items-center gap-2">
               <Trash2 className="h-5 w-5 text-rose-500 animate-pulse" />
-              <h2 className="text-sm font-semibold text-white">Thùng Rác Profile</h2>
+              <h2 className="text-sm font-semibold text-white">{t("recycle.title")}</h2>
               {profiles.length > 0 && (
                 <span className="ml-1 px-2 py-0.5 rounded-full bg-rose-600/20 text-rose-400 text-[10px] font-semibold">
                   {profiles.length}
@@ -329,7 +331,7 @@ export function RecycleBinDialog({ onCancel, onRefreshProfiles, showFeedback }: 
               type="button"
               onClick={onCancel}
               className="absolute top-4 right-4 text-gray-400 hover:text-white p-1 rounded hover:bg-surface-3 transition-colors z-20"
-              title="Đóng cửa sổ"
+              title={t("action.close")}
             >
               <X className="h-5 w-5" />
             </button>
@@ -340,7 +342,7 @@ export function RecycleBinDialog({ onCancel, onRefreshProfiles, showFeedback }: 
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-500" />
               <input
                 type="text"
-                placeholder="Tìm kiếm profile trong thùng rác..."
+                placeholder={t("recycle.search_placeholder")}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full pl-8 pr-3 h-8 bg-surface-2 border border-border rounded text-white text-xs focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30 placeholder-gray-500"
@@ -350,19 +352,19 @@ export function RecycleBinDialog({ onCancel, onRefreshProfiles, showFeedback }: 
               {selectedIds.length > 0 ? (
                 <>
                   <span className="text-gray-400 mr-2 font-medium">
-                    Đã chọn <strong className="text-accent">{selectedIds.length}</strong> dòng
+                    {t("table.selected_count", { count: selectedIds.length })}
                   </span>
                   <button onClick={handleBulkRestore} className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded transition-colors flex items-center gap-1">
                     <RotateCcw className="h-3.5 w-3.5" />
-                    <span>Khôi phục đã chọn</span>
+                    <span>{t("recycle.restore_selected")}</span>
                   </button>
                   <button onClick={handleBulkForceDelete} className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-medium rounded transition-colors flex items-center gap-1">
                     <Trash2 className="h-3.5 w-3.5" />
-                    <span>Xóa vĩnh viễn đã chọn</span>
+                    <span>{t("recycle.delete_selected")}</span>
                   </button>
                 </>
               ) : (
-                <span className="text-gray-500 italic text-[11px]">Tích chọn profile để thao tác hàng loạt</span>
+                <span className="text-gray-500 italic text-[11px]">{t("table.search_placeholder")}</span>
               )}
             </div>
           </div>
