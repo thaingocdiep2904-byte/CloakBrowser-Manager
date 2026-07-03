@@ -296,7 +296,7 @@ export function RecycleBinDialog({ onCancel, onRefreshProfiles, showFeedback }: 
                 onClick={closeConfirm}
                 className="px-4 py-1.5 rounded bg-surface-3 hover:bg-surface-4 border border-border text-gray-300 font-medium transition-colors text-xs"
               >
-                Huy bo
+                Hủy bỏ
               </button>
               <button
                 onClick={confirmState.onConfirm}
@@ -318,7 +318,7 @@ export function RecycleBinDialog({ onCancel, onRefreshProfiles, showFeedback }: 
           <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-surface-2 relative">
             <div className="flex items-center gap-2">
               <Trash2 className="h-5 w-5 text-rose-500 animate-pulse" />
-              <h2 className="text-sm font-semibold text-white">Thung Rac Profile</h2>
+              <h2 className="text-sm font-semibold text-white">Thùng Rác Profile</h2>
               {profiles.length > 0 && (
                 <span className="ml-1 px-2 py-0.5 rounded-full bg-rose-600/20 text-rose-400 text-[10px] font-semibold">
                   {profiles.length}
@@ -329,7 +329,7 @@ export function RecycleBinDialog({ onCancel, onRefreshProfiles, showFeedback }: 
               type="button"
               onClick={onCancel}
               className="absolute top-4 right-4 text-gray-400 hover:text-white p-1 rounded hover:bg-surface-3 transition-colors z-20"
-              title="Dong cua so"
+              title="Đóng cửa sổ"
             >
               <X className="h-5 w-5" />
             </button>
@@ -340,7 +340,7 @@ export function RecycleBinDialog({ onCancel, onRefreshProfiles, showFeedback }: 
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-500" />
               <input
                 type="text"
-                placeholder="Tim kiem profile trong thung rac..."
+                placeholder="Tìm kiếm profile trong thùng rác..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full pl-8 pr-3 h-8 bg-surface-2 border border-border rounded text-white text-xs focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30 placeholder-gray-500"
@@ -350,19 +350,19 @@ export function RecycleBinDialog({ onCancel, onRefreshProfiles, showFeedback }: 
               {selectedIds.length > 0 ? (
                 <>
                   <span className="text-gray-400 mr-2 font-medium">
-                    Da chon <strong className="text-accent">{selectedIds.length}</strong> dong
+                    Đã chọn <strong className="text-accent">{selectedIds.length}</strong> dòng
                   </span>
                   <button onClick={handleBulkRestore} className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded transition-colors flex items-center gap-1">
                     <RotateCcw className="h-3.5 w-3.5" />
-                    <span>Khoi phuc da chon</span>
+                    <span>Khôi phục đã chọn</span>
                   </button>
                   <button onClick={handleBulkForceDelete} className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-medium rounded transition-colors flex items-center gap-1">
                     <Trash2 className="h-3.5 w-3.5" />
-                    <span>Xoa vinh vien da chon</span>
+                    <span>Xóa vĩnh viễn đã chọn</span>
                   </button>
                 </>
               ) : (
-                <span className="text-gray-500 italic text-[11px]">Tich chon profile de thao tac hang loat</span>
+                <span className="text-gray-500 italic text-[11px]">Tích chọn profile để thao tác hàng loạt</span>
               )}
             </div>
           </div>
@@ -371,23 +371,23 @@ export function RecycleBinDialog({ onCancel, onRefreshProfiles, showFeedback }: 
             {loading ? (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-gray-400 bg-surface-1/50">
                 <Loader2 className="h-8 w-8 animate-spin text-accent" />
-                <span>Dang tai du lieu thung rac...</span>
+                <span>Đang tải dữ liệu thùng rác...</span>
               </div>
             ) : error ? (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-rose-400 p-6 text-center">
                 <AlertCircle className="h-10 w-10 text-rose-500" />
-                <p className="font-semibold">Loi tai du lieu</p>
+                <p className="font-semibold">Lỗi tải dữ liệu</p>
                 <p className="text-xs text-gray-400 max-w-md">{error}</p>
                 <button onClick={fetchDeleted} className="mt-2 px-3 py-1 bg-surface-3 hover:bg-surface-4 border border-border text-white text-xs rounded transition-colors">
-                  Tai lai
+                  Tải lại
                 </button>
               </div>
             ) : filtered.length === 0 ? (
               <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-500 gap-2 p-6 text-center">
                 <Trash2 className="h-12 w-12 text-gray-600" />
-                <p className="font-medium text-gray-400">Thung rac trong</p>
+                <p className="font-medium text-gray-400">Thùng rác trống</p>
                 <p className="text-[11px] text-gray-500 max-w-xs">
-                  {search ? "Khong tim thay profile nao khop voi tu khoa." : "Khong tim thay profile nao bi xoa tam thoi."}
+                  {search ? "Không tìm thấy profile nào khớp với từ khóa." : "Không tìm thấy profile nào bị xóa tạm thời."}
                 </p>
               </div>
             ) : (
@@ -397,12 +397,12 @@ export function RecycleBinDialog({ onCancel, onRefreshProfiles, showFeedback }: 
                     <th className="py-2.5 px-4 w-12">
                       <input type="checkbox" checked={isAllSelected} onChange={(e) => handleSelectAll(e.target.checked)} className="rounded border-gray-600 bg-surface-3 text-accent focus:ring-accent" />
                     </th>
-                    <th className="py-2.5 px-4 font-semibold text-gray-300">Ten Profile</th>
+                    <th className="py-2.5 px-4 font-semibold text-gray-300">Tên Profile</th>
                     <th className="py-2.5 px-4 font-semibold text-gray-300 w-24">OS</th>
                     <th className="py-2.5 px-4 font-semibold text-gray-300">Proxy</th>
-                    <th className="py-2.5 px-4 font-semibold text-gray-300 w-40">Ngay Xoa</th>
-                    <th className="py-2.5 px-4 font-semibold text-gray-300">Ghi chu</th>
-                    <th className="py-2.5 px-4 font-semibold text-gray-300 w-28 text-right">Hanh dong</th>
+                    <th className="py-2.5 px-4 font-semibold text-gray-300 w-40">Ngày Xóa</th>
+                    <th className="py-2.5 px-4 font-semibold text-gray-300">Ghi chú</th>
+                    <th className="py-2.5 px-4 font-semibold text-gray-300 w-28 text-right">Hành động</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border bg-surface-1">
@@ -437,14 +437,14 @@ export function RecycleBinDialog({ onCancel, onRefreshProfiles, showFeedback }: 
                             <button
                               onClick={() => handleRestore(profile.id)}
                               className="p-1 rounded bg-emerald-600/15 text-emerald-400 hover:bg-emerald-600 hover:text-white transition-colors"
-                              title="Khoi phuc profile nay"
+                              title="Khôi phục profile này"
                             >
                               <RotateCcw className="h-3.5 w-3.5" />
                             </button>
                             <button
                               onClick={() => handleForceDelete(profile.id)}
                               className="p-1 rounded bg-rose-600/15 text-rose-400 hover:bg-rose-600 hover:text-white transition-colors"
-                              title="Xoa vinh vien"
+                              title="Xóa vĩnh viễn"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
                             </button>
