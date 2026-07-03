@@ -89,16 +89,14 @@ def setup_environment():
 def setup_frontend():
     print_banner("2. BIEN DICH GIAO DIEN REACT FRONTEND")
     
-    dist_dir = FRONTEND_DIR / "dist"
-    if dist_dir.exists():
-        print("Thu muc build frontend da ton tai. Bo qua buoc build de tiet kiem thoi gian.")
-        print("Neu muon build lai, vui long xoa thu muc 'frontend/dist' roi chay lai script nay.")
-        return
+    node_modules_dir = FRONTEND_DIR / "node_modules"
+    if not node_modules_dir.exists():
+        print("Dang cai dat thu vien frontend (npm install)...")
+        # Chay qua cmd.exe de tranh chinh sach han che thuc thi script cua PowerShell
+        subprocess.run("cmd.exe /c npm install", cwd=str(FRONTEND_DIR), shell=True, check=True)
+    else:
+        print("Thu muc node_modules da ton tai. Bo qua buoc cai dat thu vien (npm install).")
         
-    print("Dang cai dat thu vien frontend (npm install)...")
-    # Chay qua cmd.exe de tranh chinh sach han che thuc thi script cua PowerShell
-    subprocess.run("cmd.exe /c npm install", cwd=str(FRONTEND_DIR), shell=True, check=True)
-    
     print("Dang bien dich frontend (npm run build)...")
     subprocess.run("cmd.exe /c npm run build", cwd=str(FRONTEND_DIR), shell=True, check=True)
     print("Bien dich frontend thanh cong.")

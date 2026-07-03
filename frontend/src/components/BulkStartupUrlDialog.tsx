@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { X } from "lucide-react";
+import { X, Save, Loader2 } from "lucide-react";
 
 interface BulkStartupUrlDialogProps {
   profileIds: string[];
@@ -29,11 +29,25 @@ export function BulkStartupUrlDialog({ profileIds, onSave, onCancel }: BulkStart
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 animate-fade-in backdrop-blur-xs">
-      <div className="bg-surface-1 border border-border rounded-lg shadow-2xl w-full max-w-md flex flex-col relative animate-scale-up">
+      <form onSubmit={handleSubmit} className="bg-surface-1 border border-border rounded-lg shadow-2xl w-full max-w-md flex flex-col relative animate-scale-up">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-surface-2 rounded-t-lg">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-surface-2 rounded-t-lg relative">
           <h2 className="text-sm font-semibold text-white">Đặt URL Khởi Động Hàng Loạt</h2>
-          <button onClick={onCancel} className="text-gray-400 hover:text-white transition-colors">
+          <div className="flex items-center gap-2 mr-8">
+            <button
+              type="submit"
+              disabled={saving}
+              className="px-4 py-1.5 rounded bg-accent hover:bg-accent/90 text-white font-medium transition-colors text-xs flex items-center gap-1.5 shadow-md shadow-violet-950/20 disabled:opacity-50"
+            >
+              {saving ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Save className="h-3.5 w-3.5" />
+              )}
+              <span>Xác nhận</span>
+            </button>
+          </div>
+          <button type="button" onClick={onCancel} className="absolute top-4 right-4 text-gray-400 hover:text-white p-1 rounded hover:bg-surface-3 transition-colors z-20" title="Đóng không lưu">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -45,7 +59,7 @@ export function BulkStartupUrlDialog({ profileIds, onSave, onCancel }: BulkStart
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="p-5 space-y-4 text-xs text-gray-300">
+        <div className="p-5 space-y-4 text-xs text-gray-300">
           <div>
             <span className="text-[11px] text-gray-400 block mb-3 leading-relaxed">
               Bạn đang cấu hình URL khởi động tự động cho <strong className="text-accent">{profileIds.length}</strong> profile đã chọn. Để trống nếu muốn xóa URL khởi động cũ.
@@ -59,26 +73,8 @@ export function BulkStartupUrlDialog({ profileIds, onSave, onCancel }: BulkStart
               placeholder="Ví dụ: https://google.com"
             />
           </div>
-
-          {/* Footer Actions */}
-          <div className="flex items-center justify-end gap-2 border-t border-border pt-4 mt-2">
-            <button
-              type="button"
-              onClick={onCancel}
-              className="px-4 py-1.5 rounded bg-surface-3 hover:bg-surface-4 text-gray-300 font-medium transition-colors"
-            >
-              Hủy
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="px-4 py-1.5 rounded bg-accent hover:bg-accent/90 text-white font-medium transition-colors"
-            >
-              {saving ? "Đang lưu..." : "Xác nhận"}
-            </button>
-          </div>
-        </form>
-      </div>
+        </div>
+      </form>
     </div>
   );
 }

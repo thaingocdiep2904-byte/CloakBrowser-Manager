@@ -6,7 +6,6 @@ interface ProfileFormProps {
   profile: Profile | null; // null = create mode
   onSave: (data: ProfileCreateData) => Promise<void>;
   onDelete?: () => Promise<void>;
-  onCancel: () => void;
 }
 
 const RESOLUTION_PRESETS: Record<string, { width: number; height: number }> = {
@@ -95,7 +94,7 @@ const generateRandomMac = () => {
   return mac;
 };
 
-export function ProfileForm({ profile, onSave, onDelete, onCancel }: ProfileFormProps) {
+export function ProfileForm({ profile, onSave, onDelete }: ProfileFormProps) {
   const isEdit = profile !== null;
 
   const [activeTab, setActiveTab] = useState<"quick" | "conn" | "soft" | "hard">("quick");
@@ -181,6 +180,15 @@ export function ProfileForm({ profile, onSave, onDelete, onCancel }: ProfileForm
       });
     } else {
       setStartupUrl("");
+      const newSeed = Math.floor(Math.random() * 90000) + 10000;
+      const cpuOptions = [4, 6, 8, 12, 16];
+      const newCpu = cpuOptions[Math.floor(Math.random() * cpuOptions.length)];
+      const ramOptions = [4, 8, 12, 16, 32];
+      const newRam = ramOptions[Math.floor(Math.random() * ramOptions.length)];
+      const gpuKeys = Object.keys(GPU_PRESETS);
+      const randomGpuKey = gpuKeys[Math.floor(Math.random() * gpuKeys.length)] as string;
+      const preset = randomGpuKey ? GPU_PRESETS[randomGpuKey] : undefined;
+
       setForm({
         name: "",
         platform: "windows",
@@ -194,16 +202,20 @@ export function ProfileForm({ profile, onSave, onDelete, onCancel }: ProfileForm
         auto_launch: false,
         launch_args: [],
         tags: [],
-        canvas_noise: "off",
+        canvas_noise: Math.random() > 0.5 ? "on" : "off",
         client_rect_noise: "off",
-        webgl_noise: "off",
+        webgl_noise: Math.random() > 0.5 ? "on" : "off",
         audio_noise: "on",
         webgl_meta_masked: true,
         media_devices_masked: true,
         media_audio_inputs: 2,
         media_audio_outputs: 1,
         media_video_inputs: 0,
-        device_memory: 4,
+        fingerprint_seed: newSeed,
+        hardware_concurrency: newCpu,
+        device_memory: newRam,
+        gpu_vendor: preset?.vendor || "Google Inc. (NVIDIA)",
+        gpu_renderer: preset?.renderer || "ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 (0x00002484) Direct3D11 vs_5_0 ps_5_0, D3D11)",
         mac_address: generateRandomMac(),
         browser_brand: "",
         storage_quota: null,
@@ -256,19 +268,19 @@ export function ProfileForm({ profile, onSave, onDelete, onCancel }: ProfileForm
 
   const handleRandomizeAll = () => {
     const newSeed = Math.floor(Math.random() * 90000) + 10000;
-    
+
     const cpuOptions = [4, 6, 8, 12, 16, 20];
     const newCpu = cpuOptions[Math.floor(Math.random() * cpuOptions.length)];
-    
+
     const ramOptions = [4, 8, 12, 16, 32];
     const newRam = ramOptions[Math.floor(Math.random() * ramOptions.length)];
-    
+
     const newMac = generateRandomMac();
-    
+
     const gpuKeys = Object.keys(GPU_PRESETS);
     const randomGpuKey = gpuKeys[Math.floor(Math.random() * gpuKeys.length)] as string;
     const preset = randomGpuKey ? GPU_PRESETS[randomGpuKey] : undefined;
-    
+
     setForm((prev) => ({
       ...prev,
       fingerprint_seed: newSeed,
@@ -332,9 +344,6 @@ export function ProfileForm({ profile, onSave, onDelete, onCancel }: ProfileForm
           )}
         </div>
         <div className="flex items-center gap-2 mr-8">
-          <button type="button" onClick={onCancel} className="px-4 py-1.5 rounded bg-surface-3 hover:bg-surface-4 text-gray-300 transition-colors font-medium">
-            Hủy bỏ
-          </button>
           <button type="submit" disabled={saving} className="px-4 py-1.5 rounded bg-accent hover:bg-accent/90 text-white transition-colors font-medium flex items-center gap-1.5">
             <Save className="h-3.5 w-3.5" />
             <span>{saving ? "Đang lưu..." : isEdit ? "Lưu lại" : "Tạo Profile"}</span>
@@ -347,36 +356,32 @@ export function ProfileForm({ profile, onSave, onDelete, onCancel }: ProfileForm
         <button
           type="button"
           onClick={() => setActiveTab("quick")}
-          className={`px-4 py-2 font-semibold uppercase tracking-wider border-b-2 text-[10px] transition-colors ${
-            activeTab === "quick" ? "border-accent text-accent bg-surface-1/40" : "border-transparent text-gray-400 hover:text-gray-200"
-          }`}
+          className={`px-4 py-2 font-semibold uppercase tracking-wider border-b-2 text-[10px] transition-colors ${activeTab === "quick" ? "border-accent text-accent bg-surface-1/40" : "border-transparent text-gray-400 hover:text-gray-200"
+            }`}
         >
           Quick action
         </button>
         <button
           type="button"
           onClick={() => setActiveTab("conn")}
-          className={`px-4 py-2 font-semibold uppercase tracking-wider border-b-2 text-[10px] transition-colors ${
-            activeTab === "conn" ? "border-accent text-accent bg-surface-1/40" : "border-transparent text-gray-400 hover:text-gray-200"
-          }`}
+          className={`px-4 py-2 font-semibold uppercase tracking-wider border-b-2 text-[10px] transition-colors ${activeTab === "conn" ? "border-accent text-accent bg-surface-1/40" : "border-transparent text-gray-400 hover:text-gray-200"
+            }`}
         >
           Connection
         </button>
         <button
           type="button"
           onClick={() => setActiveTab("soft")}
-          className={`px-4 py-2 font-semibold uppercase tracking-wider border-b-2 text-[10px] transition-colors ${
-            activeTab === "soft" ? "border-accent text-accent bg-surface-1/40" : "border-transparent text-gray-400 hover:text-gray-200"
-          }`}
+          className={`px-4 py-2 font-semibold uppercase tracking-wider border-b-2 text-[10px] transition-colors ${activeTab === "soft" ? "border-accent text-accent bg-surface-1/40" : "border-transparent text-gray-400 hover:text-gray-200"
+            }`}
         >
           Software
         </button>
         <button
           type="button"
           onClick={() => setActiveTab("hard")}
-          className={`px-4 py-2 font-semibold uppercase tracking-wider border-b-2 text-[10px] transition-colors ${
-            activeTab === "hard" ? "border-accent text-accent bg-surface-1/40" : "border-transparent text-gray-400 hover:text-gray-200"
-          }`}
+          className={`px-4 py-2 font-semibold uppercase tracking-wider border-b-2 text-[10px] transition-colors ${activeTab === "hard" ? "border-accent text-accent bg-surface-1/40" : "border-transparent text-gray-400 hover:text-gray-200"
+            }`}
         >
           Hardware
         </button>
@@ -386,7 +391,7 @@ export function ProfileForm({ profile, onSave, onDelete, onCancel }: ProfileForm
       <div className="flex-1 grid gap-6 pb-6" style={{ gridTemplateColumns: '1fr 340px', alignItems: 'start' }}>
         {/* Left Column (Active Tab Content) */}
         <div className="space-y-5 bg-surface-1/40 p-5 rounded-lg border border-border/40">
-          
+
           {/* TAB 1: QUICK ACTION */}
           {activeTab === "quick" && (
             <div className="space-y-4">
@@ -437,7 +442,7 @@ export function ProfileForm({ profile, onSave, onDelete, onCancel }: ProfileForm
                   </select>
                 </div>
                 <div>
-                  <label className="block text-gray-400 mb-1.5 font-medium">Hạt Giống Vân Tay (Seed)</label>
+                  <label className="block text-gray-400 mb-1.5 font-medium">Browser Fingerprint (Seed)</label>
                   <div className="flex gap-2">
                     <input
                       className="input flex-1 bg-surface-2 border border-border rounded px-3 py-2 text-white text-xs no-spin"
@@ -450,7 +455,7 @@ export function ProfileForm({ profile, onSave, onDelete, onCancel }: ProfileForm
                       type="button"
                       onClick={randomizeSeed}
                       className="px-3 rounded bg-surface-3 hover:bg-surface-4 text-gray-300 transition-colors border border-border"
-                      title="Sinh seed ngẫu nhiên"
+                      title="Tự động tạo ngẫu nhiên (Seed)"
                     >
                       <RefreshCw className="h-4 w-4" />
                     </button>
@@ -488,7 +493,7 @@ export function ProfileForm({ profile, onSave, onDelete, onCancel }: ProfileForm
                     className="input w-full bg-surface-2 border border-border rounded px-3 py-2 text-white text-xs"
                     value={form.timezone ?? ""}
                     onChange={(e) => set("timezone", e.target.value || null)}
-                    placeholder="Ví dụ: Asia/Ho_Chi_Minh (Để trống để tự sinh)"
+                    placeholder="Ví dụ: Asia/Ho_Chi_Minh (Để trống để tự động)"
                   />
                 </div>
                 <div>
@@ -497,7 +502,7 @@ export function ProfileForm({ profile, onSave, onDelete, onCancel }: ProfileForm
                     className="input w-full bg-surface-2 border border-border rounded px-3 py-2 text-white text-xs"
                     value={form.locale ?? ""}
                     onChange={(e) => set("locale", e.target.value || null)}
-                    placeholder="Ví dụ: vi-VN,en-US (Để trống để tự sinh)"
+                    placeholder="Ví dụ: vi-VN,en-US (Để trống để tự động)"
                   />
                 </div>
               </div>
@@ -522,7 +527,7 @@ export function ProfileForm({ profile, onSave, onDelete, onCancel }: ProfileForm
                   className="input w-full bg-surface-2 border border-border rounded px-3 py-2 text-white text-xs font-mono"
                   value={form.user_agent ?? ""}
                   onChange={(e) => set("user_agent", e.target.value || null)}
-                  placeholder="Tự động sinh từ hạt giống (seed)"
+                  placeholder="Tự động Browser Fingerprint (Seed)"
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -670,7 +675,7 @@ export function ProfileForm({ profile, onSave, onDelete, onCancel }: ProfileForm
           {activeTab === "hard" && (
             <div className="space-y-4">
               <span className="text-[10px] text-gray-400 block mb-2 leading-relaxed bg-surface-3/30 p-2.5 rounded border border-border/40">
-                Phần mềm đã tạo ngẫu nhiên một thông tin phần cứng. Nếu không quá hiểu về Fingerprint, bạn có thể không quan tâm tới phần này. Các thông số về RAM, CPU Core, Audio, Media outputs, WebGL, Tên card màn hình... đã được sinh ngẫu nhiên!
+                Phần mềm đã tạo ngẫu nhiên một thông tin phần cứng. Nếu không quá hiểu về Fingerprint, bạn có thể không quan tâm tới phần này. Các thông số về RAM, CPU Core, Audio, Media outputs, WebGL, Tên card màn hình... tự động tạo ngẫu nhiên.
               </span>
 
               {/* Phân giải màn hình */}
@@ -790,7 +795,7 @@ export function ProfileForm({ profile, onSave, onDelete, onCancel }: ProfileForm
                         value=""
                         onChange={(e) => { if (e.target.value) applyGpuPreset(e.target.value); }}
                       >
-                        <option value="">-- Chọn card mẫu để sinh nhanh --</option>
+                        <option value="">-- Thiết lập mặc định --</option>
                         {Object.keys(GPU_PRESETS).map((name) => (
                           <option key={name} value={name}>{name}</option>
                         ))}
@@ -803,7 +808,7 @@ export function ProfileForm({ profile, onSave, onDelete, onCancel }: ProfileForm
                           className="input w-full bg-surface-2 border border-border rounded px-2.5 py-1.5 text-white text-xs font-mono"
                           value={form.gpu_vendor ?? ""}
                           onChange={(e) => set("gpu_vendor", e.target.value || null)}
-                          placeholder="Mặc định sinh từ seed"
+                          placeholder="Mặc định tự động tạo"
                         />
                       </div>
                       <div>
@@ -812,7 +817,7 @@ export function ProfileForm({ profile, onSave, onDelete, onCancel }: ProfileForm
                           className="input w-full bg-surface-2 border border-border rounded px-2.5 py-1.5 text-white text-xs font-mono"
                           value={form.gpu_renderer ?? ""}
                           onChange={(e) => set("gpu_renderer", e.target.value || null)}
-                          placeholder="Mặc định sinh từ seed"
+                          placeholder="Mặc định tự động tạo"
                         />
                       </div>
                     </div>
@@ -888,7 +893,7 @@ export function ProfileForm({ profile, onSave, onDelete, onCancel }: ProfileForm
                   </select>
                 </div>
                 <div>
-                  <label className="block text-gray-400 mb-1 font-medium">RAM giả lập</label>
+                  <label className="block text-gray-400 mb-1 font-medium">Dung lượng RAM</label>
                   <select
                     className="input w-full bg-surface-2 border border-border rounded px-2.5 py-1.5 text-white text-xs"
                     value={form.device_memory ?? 4}
@@ -930,7 +935,7 @@ export function ProfileForm({ profile, onSave, onDelete, onCancel }: ProfileForm
                       type="button"
                       onClick={() => set("mac_address", generateRandomMac())}
                       className="px-2 rounded bg-surface-3 hover:bg-surface-4 text-gray-300 transition-colors border border-border"
-                      title="Sinh MAC ngẫu nhiên"
+                      title="Tạo MAC ngẫu nhiên"
                     >
                       <RefreshCw className="h-3.5 w-3.5" />
                     </button>
@@ -956,9 +961,19 @@ export function ProfileForm({ profile, onSave, onDelete, onCancel }: ProfileForm
 
         {/* Right Column (Fingerprint Summary Panel) */}
         <div className="bg-surface-2/40 border border-border/80 rounded-lg p-5 flex flex-col space-y-3.5 text-xs text-gray-300 shadow-xl h-fit sticky top-0">
-          <div className="flex items-center gap-2 border-b border-border/60 pb-2.5 mb-1.5">
-            <Layers className="h-4 w-4 text-accent" />
-            <h3 className="font-bold text-white uppercase tracking-wider text-[11px]">Thông số vân tay</h3>
+          <div className="flex items-center justify-between border-b border-border/60 pb-2.5 mb-1.5">
+            <div className="flex items-center gap-2">
+              <Layers className="h-4 w-4 text-accent" />
+              <h3 className="font-bold text-white uppercase tracking-wider text-[11px]">Thông số vân tay</h3>
+            </div>
+            <button
+              type="button"
+              onClick={handleRandomizeAll}
+              className="p-1 rounded bg-indigo-600/10 hover:bg-indigo-600 border border-indigo-500/25 text-indigo-400 hover:text-white transition-colors"
+              title="Tạo ngẫu nhiên nhanh toàn bộ thông số phần cứng/phần mềm"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+            </button>
           </div>
 
           <div className="space-y-3">
@@ -975,7 +990,7 @@ export function ProfileForm({ profile, onSave, onDelete, onCancel }: ProfileForm
                 <span className="text-white font-medium capitalize">{form.platform}</span>
               </div>
               <div>
-                <span className="text-[10px] text-gray-500 font-medium block">Hạt giống (Seed)</span>
+                <span className="text-[10px] text-gray-500 font-medium block">Browser Fingerprint (Seed)</span>
                 <span className="text-white font-mono">{form.fingerprint_seed ?? "Ngẫu nhiên"}</span>
               </div>
             </div>
@@ -991,7 +1006,7 @@ export function ProfileForm({ profile, onSave, onDelete, onCancel }: ProfileForm
                 <span className="text-white font-mono">{form.screen_width} × {form.screen_height}</span>
               </div>
               <div>
-                <span className="text-[10px] text-gray-500 font-medium block">RAM giả lập</span>
+                <span className="text-[10px] text-gray-500 font-medium block">Dung lượng RAM</span>
                 <span className="text-white font-medium">{form.device_memory} GB</span>
               </div>
             </div>

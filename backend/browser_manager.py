@@ -16,7 +16,54 @@ from cloakbrowser import launch_persistent_context_async
 
 from .vnc_manager import VNCManager
 
+import shutil
+import stat
+
 logger = logging.getLogger("cloakbrowser.manager.browser")
+
+
+def _remove_readonly(func, path, excinfo):
+    """Clear the readonly bit and reattempt rmtree."""
+    try:
+        os.chmod(path, stat.S_IWRITE)
+        func(path)
+    except Exception:
+        pass
+
+
+async def clear_profile_cache_folders(user_data_dir: Path):
+    """An safely delayed and retried cache cleaner for Chromium profiles."""
+    target_dirs = [
+        # Thư mục cache ngoài
+        user_data_dir / "ShaderCache",
+        user_data_dir / "GrShaderCache",
+        user_data_dir / "GraphiteDawnCache",
+        user_data_dir / "BrowserMetrics",
+        # Thư mục cache trong Default
+        user_data_dir / "Default" / "Cache",
+        user_data_dir / "Default" / "Code Cache",
+        user_data_dir / "Default" / "GPUCache",
+        user_data_dir / "Default" / "DawnGraphiteCache",
+        user_data_dir / "Default" / "DawnWebGPUCache",
+        user_data_dir / "Default" / "AutofillAiModelCache",
+        user_data_dir / "Default" / "Service Worker",
+    ]
+    
+    # Đợi 0.5 giây đầu
+    await asyncio.sleep(0.5)
+    
+    # Thử lại tối đa 4 lần, mỗi lần cách nhau 0.5 giây
+    for attempt in range(4):
+        all_done = True
+        for path in target_dirs:
+            if path.exists() and path.is_dir():
+                try:
+                    shutil.rmtree(str(path), onerror=_remove_readonly)
+                except Exception:
+                    all_done = False
+        if all_done:
+            break
+        await asyncio.sleep(0.5)
 
 
 def _normalize_proxy(raw: str) -> str:
@@ -147,6 +194,8 @@ def _init_profile_defaults(user_data_dir: Path) -> None:
         data["profile"]["default_search_provider"] = {
             "enabled": True
         }
+        data["profile"]["exit_type"] = "Normal"
+        data["profile"]["exited_cleanly"] = True
         
         # Configure reopen tabs (restore session)
         from . import database as db
@@ -199,14 +248,14 @@ class BrowserManager:
                 raise RuntimeError(f"Profile {profile_id} is already running")
             self._launching.add(profile_id)
 
-        display, ws_port = await self.vnc.allocate()
+        display = 0
+        ws_port = 0
 
         try:
             cdp_port = self._allocate_cdp_port()
         except ValueError:
             async with self._lock:
                 self._launching.discard(profile_id)
-            await self.vnc.stop_vnc(display)
             raise
 
         # Clean stale Chromium lock files (left by previous container crashes)
@@ -235,16 +284,45 @@ class BrowserManager:
                 w = 1920
                 h = 1080
 
-            # Start KasmVNC on the allocated display
-            await self.vnc.start_vnc(
-                display,
-                ws_port,
-                width=w,
-                height=h,
-            )
+
 
             # Build fingerprint args from profile settings
             extra_args = self._build_fingerprint_args(profile)
+            
+            # Load reopen_tabs setting
+            def to_bool_local(val) -> bool:
+                if not val:
+                    return False
+                return str(val).lower() in ("true", "1", "yes", "on")
+            reopen_tabs = to_bool_local(app_settings.get("reopen_tabs"))
+            
+            # Add --restore-last-session flag when reopen_tabs is enabled
+            if reopen_tabs:
+                extra_args.append("--restore-last-session")
+            
+            # Load profile extensions
+            profile_exts = db.get_profile_extensions(profile["id"])
+            enabled_ext_paths = [e["path"] for e in profile_exts if e.get("is_enabled")]
+            
+            # Load system default extensions
+            import json
+            default_exts_str = app_settings.get("default_extensions", "[]")
+            try:
+                default_ext_ids = json.loads(default_exts_str)
+                if default_ext_ids:
+                    all_exts = db.get_all_extensions()
+                    for ext in all_exts:
+                        if ext["id"] in default_ext_ids:
+                            if ext["path"] not in enabled_ext_paths:
+                                enabled_ext_paths.append(ext["path"])
+            except Exception:
+                pass
+                
+            if enabled_ext_paths:
+                ext_paths_str = ",".join(enabled_ext_paths)
+                extra_args.append(f"--disable-extensions-except={ext_paths_str}")
+                extra_args.append(f"--load-extension={ext_paths_str}")
+
             extra_args += profile.get("launch_args") or []
             extra_args.append(f"--remote-debugging-port={cdp_port}")
 
@@ -259,99 +337,31 @@ class BrowserManager:
             if proxy:
                 _validate_proxy(proxy)
 
-            # Launch CloakBrowser
-            # On Windows, we don't pass DISPLAY env and use a standard viewport height.
-            if os.name == "nt":
-                context = await launch_persistent_context_async(
-                    user_data_dir=profile["user_data_dir"],
-                    headless=bool(profile.get("headless", False)),
-                    proxy=proxy,
-                    args=extra_args,
-                    timezone=profile.get("timezone") or None,
-                    locale=profile.get("locale") or None,
-                    humanize=bool(profile.get("humanize", False)),
-                    human_preset=profile.get("human_preset", "default"),
-                    geoip=bool(profile.get("geoip", False)),
-                    color_scheme=profile.get("color_scheme") or None,
-                    user_agent=profile.get("user_agent") or None,
-                    viewport={
-                        "width": w,
-                        "height": h,
-                    },
-                    env=os.environ.copy(),
-                )
-            else:
-                context = await launch_persistent_context_async(
-                    user_data_dir=profile["user_data_dir"],
-                    headless=bool(profile.get("headless", False)),
-                    proxy=proxy,
-                    args=extra_args,
-                    timezone=profile.get("timezone") or None,
-                    locale=profile.get("locale") or None,
-                    humanize=bool(profile.get("humanize", False)),
-                    human_preset=profile.get("human_preset", "default"),
-                    geoip=bool(profile.get("geoip", False)),
-                    color_scheme=profile.get("color_scheme") or None,
-                    user_agent=profile.get("user_agent") or None,
-                    viewport={
-                        "width": w,
-                        "height": h - 133,
-                    },
-                    env={**os.environ, "DISPLAY": f":{display}"},
-                )
-
-            # Inject clipboard listener: captures copied text on every page
-            # so the GET /clipboard endpoint can read it via page.evaluate()
-            _clipboard_init_js = """
-                window.__clipboardText = '';
-                document.addEventListener('copy', () => {
-                    const sel = window.getSelection();
-                    if (sel) window.__clipboardText = sel.toString();
-                });
-                document.addEventListener('keydown', (e) => {
-                    if ((e.ctrlKey || e.metaKey) && e.key === 'c' && !e.altKey && !e.shiftKey) {
-                        const sel = window.getSelection();
-                        if (sel && sel.toString()) window.__clipboardText = sel.toString();
-                    }
-                });
-            """
-            await context.add_init_script(_clipboard_init_js)
-            # Also inject into already-open pages (about:blank created before init_script)
-            for p in context.pages:
-                try:
-                    await p.evaluate(_clipboard_init_js)
-                except Exception as exc:
-                    logger.debug("Clipboard init failed on existing page: %s", exc)
-
-            # Navigate to startup URLs if any
-            if startup_urls:
-                async def navigate_startup(ctx, urls):
-                    try:
-                        # Wait a short moment to ensure the context is fully stable and ready
-                        await asyncio.sleep(0.5)
-                        
-                        first_url = urls[0]
-                        pages = ctx.pages
-                        if pages:
-                            await pages[0].goto(first_url)
-                        else:
-                            page = await ctx.new_page()
-                            await page.goto(first_url)
-                            
-                        # If there are multiple startup URLs, open them in new tabs
-                        for url in urls[1:]:
-                            page = await ctx.new_page()
-                            await page.goto(url)
-                    except Exception as e:
-                        logger.warning("Failed to open startup URLs: %s", e)
-                
-                asyncio.create_task(navigate_startup(context, startup_urls))
+            # Launch CloakBrowser directly on the desktop
+            context = await launch_persistent_context_async(
+                user_data_dir=profile["user_data_dir"],
+                headless=bool(profile.get("headless", False)),
+                proxy=proxy,
+                args=extra_args,
+                timezone=profile.get("timezone") or None,
+                locale=profile.get("locale") or None,
+                humanize=bool(profile.get("humanize", False)),
+                human_preset=profile.get("human_preset", "default"),
+                geoip=bool(profile.get("geoip", False)),
+                color_scheme=profile.get("color_scheme") or None,
+                user_agent=profile.get("user_agent") or None,
+                viewport={
+                    "width": w,
+                    "height": h,
+                } if auto_resize else None,
+                env=os.environ.copy(),
+            )
 
             running = RunningProfile(
                 profile_id=profile_id,
                 context=context,
-                display=display,
-                ws_port=ws_port,
+                display=0,
+                ws_port=0,
                 cdp_port=cdp_port,
             )
 
@@ -374,10 +384,9 @@ class BrowserManager:
         except BaseException:
             async with self._lock:
                 self._launching.discard(profile_id)
-            await self.vnc.stop_vnc(display)
             raise
 
-    def _clear_profile_cache(self, profile_id: str):
+    async def _clear_profile_cache(self, profile_id: str):
         """Clean up Chromium cache directories if auto_clear_cache setting is enabled."""
         try:
             from . import database as db
@@ -395,29 +404,19 @@ class BrowserManager:
                 return
                 
             user_data_dir = Path(profile["user_data_dir"])
-            default_dir = user_data_dir / "Default"
-            if not default_dir.exists():
-                return
-                
-            import shutil
-            cache_dirs = ["Cache", "Code Cache", "GPUCache"]
-            for cache_dir in cache_dirs:
-                target_path = default_dir / cache_dir
-                if target_path.exists() and target_path.is_dir():
-                    shutil.rmtree(str(target_path), ignore_errors=True)
+            await clear_profile_cache_folders(user_data_dir)
             logger.info("Auto cleared cache directories for profile %s", profile_id)
         except Exception as e:
             logger.warning("Error auto clearing cache for profile %s: %s", profile_id, e)
 
     async def _on_browser_closed(self, profile_id: str):
-        """Called when browser exits (crash, user closed via VNC, or stop())."""
+        """Called when browser exits (crash, or stop())."""
         async with self._lock:
             running = self.running.pop(profile_id, None)
 
         if running:
             logger.info("Browser closed for profile %s, cleaning up", profile_id)
-            await self.vnc.stop_vnc(running.display)
-            self._clear_profile_cache(profile_id)
+            await self._clear_profile_cache(profile_id)
 
     async def stop(self, profile_id: str):
         """Stop a running browser instance."""
@@ -435,8 +434,7 @@ class BrowserManager:
         except Exception as exc:
             logger.warning("Error closing context for %s: %s", profile_id, exc)
 
-        await self.vnc.stop_vnc(running.display)
-        self._clear_profile_cache(profile_id)
+        await self._clear_profile_cache(profile_id)
 
     def get_status(self, profile_id: str) -> dict[str, Any]:
         """Get running status for a profile."""
@@ -458,7 +456,7 @@ class BrowserManager:
         for pid in profile_ids:
             await self.stop(pid)
 
-        await self.vnc.cleanup_all()
+
 
     async def cleanup_stale(self):
         """Kill orphan processes from previous container runs."""
@@ -506,7 +504,6 @@ class BrowserManager:
         args: list[str] = [
             "--disable-infobars",
             "--test-type",  # suppress "unsupported flag: --no-sandbox" bad flags warning
-            "--use-angle=swiftshader",  # software GL for VNC (no GPU in container)
         ]
 
         seed = profile.get("fingerprint_seed")

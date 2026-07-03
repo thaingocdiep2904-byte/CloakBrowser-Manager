@@ -16,6 +16,7 @@ import { BulkImportDialog } from "./components/BulkImportDialog";
 import { SettingsTab } from "./components/SettingsTab";
 import { ApiTab } from "./components/ApiTab";
 import { AboutTab } from "./components/AboutTab";
+import { RecycleBinDialog } from "./components/RecycleBinDialog";
 import logoImg from "./logo.png";
 
 type AuthState = "checking" | "required" | "ok" | "error";
@@ -104,12 +105,29 @@ function AppContent({ authRequired, onLogout }: AppContentProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [view, setView] = useState<View>("empty");
   const [osName, setOsName] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<string | null>(null);
+  const [useTrash, setUseTrash] = useState(true);
+  const [recycleBinOpen, setRecycleBinOpen] = useState(false);
+
+  useEffect(() => {
+    api.getSettings()
+      .then((s) => {
+        setUseTrash(!s.no_trash);
+      })
+      .catch((err) => console.error("Failed to load settings in AppContent:", err));
+  }, [activeTab]);
+
+  const showFeedback = useCallback((msg: string) => {
+    setFeedback(msg);
+    setTimeout(() => setFeedback(null), 2000);
+  }, []);
 
   const handleTableLaunch = useCallback(async (id: string) => {
     setSelectedId(id);
     setView("empty"); // Đóng modal cấu hình
-    const result = await launch(id);
-    if (result && osName !== "nt") setView("view");
+    await launch(id);
+    // Chạy trực tiếp trên desktop thật, không chuyển sang view VNC nữa
+    setView("empty");
   }, [launch, osName]);
   const [bulkCreateOpen, setBulkCreateOpen] = useState(false);
   const [bulkStartupUrlOpen, setBulkStartupUrlOpen] = useState(false);
@@ -123,32 +141,38 @@ function AppContent({ authRequired, onLogout }: AppContentProps) {
   const handleBulkStartupUrl = useCallback(async (ids: string[], url: string) => {
     await api.bulkSetStartupUrl(ids, url);
     await refresh();
-  }, [refresh]);
+    showFeedback(`Đã thiết lập URL khởi động cho ${ids.length} profiles thành công!`);
+  }, [refresh, showFeedback]);
 
   const handleBulkResetProxy = useCallback(async (ids: string[], proxies: string[]) => {
     await api.bulkResetProxy(ids, proxies);
     await refresh();
-  }, [refresh]);
+    showFeedback(`Đã cập nhật proxy cho ${ids.length} profiles thành công!`);
+  }, [refresh, showFeedback]);
 
   const handleBulkGroup = useCallback(async (ids: string[], tags: { tag: string; color: string | null }[]) => {
     await api.bulkSetGroup(ids, tags);
     await refresh();
-  }, [refresh]);
+    showFeedback(`Đã gom nhóm cho ${ids.length} profiles thành công!`);
+  }, [refresh, showFeedback]);
 
   const handleBulkCacheClear = useCallback(async (ids: string[]) => {
     await api.bulkClearCache(ids);
     await refresh();
-  }, [refresh]);
+    showFeedback(`Đã xóa cache cho ${ids.length} profiles thành công!`);
+  }, [refresh, showFeedback]);
 
   const handleBulkBookmark = useCallback(async (ids: string[], bookmarks: { name: string; url: string }[]) => {
     await api.bulkSetBookmark(ids, bookmarks);
     await refresh();
-  }, [refresh]);
+    showFeedback(`Đã cập nhật dấu trang cho ${ids.length} profiles thành công!`);
+  }, [refresh, showFeedback]);
 
   const handleBulkImport = useCallback(async (list: { name: string; proxy?: string; notes?: string }[]) => {
     await api.bulkImport(list);
     await refresh();
-  }, [refresh]);
+    showFeedback(`Đã nhập thành công ${list.length} profiles!`);
+  }, [refresh, showFeedback]);
 
   const handleGridLayout = useCallback(async () => {
     try {
@@ -218,8 +242,9 @@ function AppContent({ authRequired, onLogout }: AppContentProps) {
       setSelectedId(null);
       setView("empty");
       await refresh();
+      showFeedback("Đã tạo Profile thành công!");
     }
-  }, [create, refresh]);
+  }, [create, refresh, showFeedback]);
 
   const handleUpdate = useCallback(async (data: ProfileCreateData) => {
     if (!selectedId) return;
@@ -228,17 +253,25 @@ function AppContent({ authRequired, onLogout }: AppContentProps) {
       setSelectedId(null);
       setView("empty");
       await refresh();
+      showFeedback("Đã lưu cấu hình Profile thành công!");
     }
-  }, [selectedId, update, refresh]);
+  }, [selectedId, update, refresh, showFeedback]);
 
   const handleClone = useCallback(async (id: string) => {
     try {
       await api.cloneProfile(id);
       await refresh();
+      showFeedback("Nhân bản Profile thành công!");
     } catch (err) {
       alert("Lỗi nhân bản profile: " + (err instanceof Error ? err.message : String(err)));
     }
-  }, [refresh]);
+  }, [refresh, showFeedback]);
+
+  const handleBulkCreate = useCallback(async (data: any) => {
+    await bulkCreate(data);
+    setBulkCreateOpen(false);
+    showFeedback(`Đã tạo thành công ${data.count || 1} profiles!`);
+  }, [bulkCreate, showFeedback]);
 
   const handleDelete = useCallback(async () => {
     if (!selectedId) return;
@@ -260,7 +293,13 @@ function AppContent({ authRequired, onLogout }: AppContentProps) {
   }
 
   return (
-    <div className="h-screen flex bg-surface-0 font-sans selection:bg-primary/30 selection:text-white">
+    <div className="h-screen flex bg-surface-0 font-sans selection:bg-primary/30 selection:text-white relative">
+      {/* Feedback Toast Toàn Cục */}
+      {feedback && (
+        <div className="fixed top-4 right-4 bg-emerald-600 border border-emerald-500 text-white text-xs px-4 py-2 rounded shadow-lg z-[9999] animate-bounce">
+          {feedback}
+        </div>
+      )}
       {/* Dock (Sidebar điều hướng bên trái ngoài cùng) */}
       <div className="w-[150px] border-r border-border bg-surface-2 flex flex-col py-4 px-2 flex-shrink-0 gap-1 z-10">
         <div className="flex items-center gap-2 px-1 py-2 mb-4 border-b border-border/40 pb-3">
@@ -371,6 +410,9 @@ function AppContent({ authRequired, onLogout }: AppContentProps) {
                   onBulkBookmark={triggerBulkBookmark}
                   onGridLayout={handleGridLayout}
                   onBulkImport={() => setBulkImportOpen(true)}
+                  showFeedback={showFeedback}
+                  useTrash={useTrash}
+                  onOpenRecycleBin={() => setRecycleBinOpen(true)}
                 />
               ) : (
                 selected && selected.status === "running" && (
@@ -403,10 +445,6 @@ function AppContent({ authRequired, onLogout }: AppContentProps) {
                         profile={view === "edit" ? selected : null}
                         onSave={view === "create" ? handleCreate : handleUpdate}
                         onDelete={view === "edit" ? handleDelete : undefined}
-                        onCancel={() => {
-                          setSelectedId(null);
-                          setView("empty");
-                        }}
                       />
                     </div>
                   </div>
@@ -415,7 +453,7 @@ function AppContent({ authRequired, onLogout }: AppContentProps) {
             </div>
           </div>
       ) : activeTab === "settings" ? (
-        <SettingsTab />
+        <SettingsTab showFeedback={showFeedback} />
       ) : activeTab === "api" ? (
         <ApiTab />
       ) : (
@@ -424,7 +462,7 @@ function AppContent({ authRequired, onLogout }: AppContentProps) {
 
       {bulkCreateOpen && (
         <BulkCreateDialog
-          onSave={bulkCreate}
+          onSave={handleBulkCreate}
           onCancel={() => setBulkCreateOpen(false)}
         />
       )}
@@ -473,6 +511,14 @@ function AppContent({ authRequired, onLogout }: AppContentProps) {
         <BulkImportDialog
           onImport={handleBulkImport}
           onCancel={() => setBulkImportOpen(false)}
+        />
+      )}
+
+      {recycleBinOpen && (
+        <RecycleBinDialog
+          onCancel={() => setRecycleBinOpen(false)}
+          onRefreshProfiles={refresh}
+          showFeedback={showFeedback}
         />
       )}
     </div>

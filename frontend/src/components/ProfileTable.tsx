@@ -8,7 +8,6 @@ import {
   Search,
   Laptop,
   Trash,
-  FileSpreadsheet,
   FolderOpen,
   LayoutGrid,
   Copy,
@@ -28,6 +27,7 @@ import {
 import { api, type Profile } from "../lib/api";
 import { StatusIndicator } from "./StatusIndicator";
 import { ImportCookiesDialog } from "./ImportCookiesDialog";
+import { ExtensionDialog } from "./ExtensionDialog";
 
 interface ProfileTableProps {
   profiles: Profile[];
@@ -49,6 +49,9 @@ interface ProfileTableProps {
   onBulkBookmark: (ids: string[]) => void;
   onGridLayout: () => Promise<void>;
   onBulkImport: () => void;
+  showFeedback: (msg: string) => void;
+  useTrash?: boolean;
+  onOpenRecycleBin?: () => void;
 }
 
 export function ProfileTable({
@@ -71,6 +74,9 @@ export function ProfileTable({
   onBulkBookmark,
   onGridLayout,
   onBulkImport,
+  showFeedback,
+  useTrash = true,
+  onOpenRecycleBin,
 }: ProfileTableProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [lastClickedIndex, setLastClickedIndex] = useState<number | null>(null);
@@ -80,7 +86,7 @@ export function ProfileTable({
   const [groupFilter, setGroupFilter] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
   const [resizeAllowed, setResizeAllowed] = useState(false);
-  const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
+
   const [proxyCheckStates, setProxyCheckStates] = useState<Record<string, {
     checking: boolean;
     status?: 'live' | 'dead' | 'no_proxy' | 'direct';
@@ -92,6 +98,19 @@ export function ProfileTable({
   const [deleteTargetIds, setDeleteTargetIds] = useState<string[]>([]);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [importCookiesTarget, setImportCookiesTarget] = useState<{ id: string; name: string } | null>(null);
+  const [extensionTarget, setExtensionTarget] = useState<{ ids: string[]; name: string } | null>(null);
+
+  const selectedProfiles = useMemo(() => {
+    return profiles.filter((p) => selectedIds.includes(p.id));
+  }, [profiles, selectedIds]);
+
+  const anyRunning = useMemo(() => {
+    return selectedProfiles.some((p) => p.status === "running");
+  }, [selectedProfiles]);
+
+  const anyStopped = useMemo(() => {
+    return selectedProfiles.some((p) => p.status !== "running");
+  }, [selectedProfiles]);
 
   // Click outside to close dropdown
   useEffect(() => {
@@ -217,10 +236,7 @@ export function ProfileTable({
     setSelectedIds(rangeIds);
   };
 
-  const showFeedback = (msg: string) => {
-    setCopyFeedback(msg);
-    setTimeout(() => setCopyFeedback(null), 2000);
-  };
+
 
   const copyToClipboard = (text: string, msg: string) => {
     navigator.clipboard.writeText(text)
@@ -336,9 +352,11 @@ export function ProfileTable({
       case "export_excel":
         handleExportCSV();
         break;
+      case "extension":
+        setExtensionTarget({ ids: selectedIds, name: `Đã chọn ${selectedIds.length} profiles` });
+        break;
       case "excel":
       case "cookies":
-      case "extension":
       case "version":
       case "sync":
         alert(`Chức năng "${action}" đang được lên kế hoạch và sẽ sớm khả dụng ở Giai đoạn tiếp theo.`);
@@ -390,11 +408,7 @@ export function ProfileTable({
   return (
     <div className="flex flex-col h-full bg-surface-0 relative select-none">
       {/* Feedback Toast */}
-      {copyFeedback && (
-        <div className="absolute top-4 right-4 bg-emerald-600 border border-emerald-500 text-white text-xs px-4 py-2 rounded shadow-lg z-50 animate-bounce">
-          {copyFeedback}
-        </div>
-      )}
+
 
       {/* 1. Top Menu Action Bar (Giống GPM-Login) */}
       <div className="p-4 border-b border-border flex items-center justify-between gap-4 flex-wrap bg-surface-1">
@@ -409,27 +423,21 @@ export function ProfileTable({
             <span>Tạo theo số lượng</span>
           </button>
 
-          <button onClick={() => handleBulkAction("import_excel")} className="btn-menu bg-surface-3 hover:bg-surface-4 border border-border text-gray-200 py-1.5 px-3 text-xs rounded font-medium flex items-center gap-1.5 transition-colors" title="Nhập profile hàng loạt từ file Excel/CSV">
-            <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-500" />
-            <span>Từ Excel</span>
-          </button>
-
-          <button onClick={() => handleBulkAction("import_excel")} className="btn-menu bg-surface-3 hover:bg-surface-4 border border-border text-gray-200 py-1.5 px-3 text-xs rounded font-medium flex items-center gap-1.5 transition-colors" title="Import profile từ file CSV">
+          <button onClick={() => handleBulkAction("import_excel")} className="btn-menu bg-surface-3 hover:bg-surface-4 border border-border text-gray-200 py-1.5 px-3 text-xs rounded font-medium flex items-center gap-1.5 transition-colors" title="Import profile từ file CSV/Excel">
             <FolderOpen className="h-3.5 w-3.5 text-blue-500" />
             <span>Import</span>
           </button>
 
+          {useTrash && onOpenRecycleBin && (
+            <button onClick={onOpenRecycleBin} className="btn-menu bg-surface-3 hover:bg-surface-4 border border-border text-gray-200 py-1.5 px-3 text-xs rounded font-medium flex items-center gap-1.5 transition-colors animate-pulse" title="Xem các profile đã bị xóa trong Thùng rác">
+              <Trash2 className="h-3.5 w-3.5 text-rose-500" />
+              <span>Thùng rác</span>
+            </button>
+          )}
+
           <button onClick={() => handleBulkAction("grid_layout")} className="btn-menu bg-surface-3 hover:bg-surface-4 border border-border text-gray-200 py-1.5 px-3 text-xs rounded font-medium flex items-center gap-1.5 transition-colors" title="Sắp xếp lưới tất cả cửa sổ trình duyệt đang chạy">
             <LayoutGrid className="h-3.5 w-3.5 text-cyan-500" />
             <span>Sắp xếp cửa sổ trình duyệt</span>
-          </button>
-        </div>
-
-        {/* User Identity Info / Trash */}
-        <div className="flex items-center gap-2 text-xs">
-          <button onClick={() => handleBulkAction("delete")} className="flex items-center gap-1.5 bg-surface-3 hover:bg-surface-4 border border-border text-gray-300 py-1.5 px-3 rounded font-medium transition-colors">
-            <Trash className="h-3.5 w-3.5 text-rose-400" />
-            <span>Thùng rác</span>
           </button>
         </div>
       </div>
@@ -504,21 +512,23 @@ export function ProfileTable({
             <div className="h-3 w-px bg-border mx-1"></div>
             
             {/* Nút hành động chính */}
-            <button
-              onClick={() => handleBulkAction("launch")}
-              disabled={selectedIds.length === 0}
-              className={`btn-bulk bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-3 py-1 rounded flex items-center gap-1 transition-colors ${
-                selectedIds.length === 0 ? "opacity-40 cursor-not-allowed pointer-events-none" : ""
-              }`}
-            >
-              <Play className="h-3.5 w-3.5" />
-              <span>Mở</span>
-            </button>
+            {anyStopped && (
+              <button
+                onClick={() => handleBulkAction("launch")}
+                disabled={selectedIds.length === 0}
+                className={`btn-bulk bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-3 py-1 rounded flex items-center gap-1 transition-colors ${
+                  selectedIds.length === 0 ? "opacity-40 cursor-not-allowed pointer-events-none" : ""
+                }`}
+              >
+                <Play className="h-3.5 w-3.5" />
+                <span>Mở</span>
+              </button>
+            )}
             <button
               onClick={() => handleBulkAction("stop")}
-              disabled={selectedIds.length === 0}
+              disabled={selectedIds.length === 0 || !anyRunning}
               className={`btn-bulk bg-rose-600 hover:bg-rose-700 text-white font-medium px-3 py-1 rounded flex items-center gap-1 transition-colors ${
-                selectedIds.length === 0 ? "opacity-40 cursor-not-allowed pointer-events-none" : ""
+                (selectedIds.length === 0 || !anyRunning) ? "opacity-30 cursor-not-allowed pointer-events-none" : ""
               }`}
             >
               <Square className="h-3.5 w-3.5" />
@@ -876,7 +886,7 @@ export function ProfileTable({
                               </button>
                               <button
                                 onMouseDown={() => {
-                                  alert("Tính năng Sửa Extension đang được phát triển.");
+                                  setExtensionTarget({ ids: [profile.id], name: profile.name });
                                   setActiveMenuId(null);
                                 }}
                                 className="w-full text-left px-3 py-1.5 hover:bg-accent hover:text-white flex items-center gap-2 text-gray-300 transition-colors"
@@ -997,7 +1007,7 @@ export function ProfileTable({
             <div className="flex items-center justify-between p-4 border-b border-border/60">
               <h3 className="text-sm font-semibold text-white flex items-center gap-2">
                 <Trash className="h-4 w-4 text-rose-500" />
-                Xác nhận xóa Profile
+                {useTrash ? "Chuyển vào Thùng rác" : "Xác nhận xóa vĩnh viễn"}
               </h3>
               <button
                 onClick={() => setDeleteConfirmOpen(false)}
@@ -1017,17 +1027,29 @@ export function ProfileTable({
                     "{profiles.find((p) => p.id === deleteTargetIds[0])?.name}"
                   </strong>{" "}
                   không?
-                  <p className="mt-2 text-rose-400 font-medium">
-                    * Cảnh báo: Thao tác này sẽ xóa vĩnh viễn dữ liệu trình duyệt trên ổ đĩa và không thể hoàn tác.
-                  </p>
+                  {useTrash ? (
+                    <p className="mt-2 text-amber-400 font-medium">
+                      ℹ️ Profile sẽ được chuyển vào Thùng rác. Bạn có thể khôi phục lại sau.
+                    </p>
+                  ) : (
+                    <p className="mt-2 text-rose-400 font-medium">
+                      ⚠️ Cảnh báo: Thao tác này sẽ xóa vĩnh viễn dữ liệu trình duyệt trên ổ đĩa và không thể hoàn tác.
+                    </p>
+                  )}
                 </div>
               ) : (
                 <div>
                   Bạn có chắc chắn muốn xóa{" "}
                   <strong className="text-white">{deleteTargetIds.length} profiles</strong> đã chọn không?
-                  <p className="mt-2 text-rose-400 font-medium">
-                    * Cảnh báo: Thao tác này sẽ xóa vĩnh viễn toàn bộ dữ liệu trình duyệt trên ổ đĩa của các profile này.
-                  </p>
+                  {useTrash ? (
+                    <p className="mt-2 text-amber-400 font-medium">
+                      ℹ️ Các profile sẽ được chuyển vào Thùng rác. Bạn có thể khôi phục lại sau.
+                    </p>
+                  ) : (
+                    <p className="mt-2 text-rose-400 font-medium">
+                      ⚠️ Cảnh báo: Thao tác này sẽ xóa vĩnh viễn toàn bộ dữ liệu trình duyệt trên ổ đĩa của các profile này.
+                    </p>
+                  )}
                 </div>
               )}
             </div>
@@ -1043,18 +1065,31 @@ export function ProfileTable({
               <button
                 onClick={async () => {
                   const idsToDelete = [...deleteTargetIds];
+                  const nameToDelete = profiles.find((p) => p.id === idsToDelete[0])?.name;
                   setDeleteConfirmOpen(false);
                   setDeleteTargetIds([]);
                   if (idsToDelete.length === 1) {
                     await onDelete(idsToDelete[0]!);
+                    showFeedback(useTrash
+                      ? `Đã chuyển profile "${nameToDelete}" vào Thùng rác!`
+                      : `Đã xóa vĩnh viễn profile "${nameToDelete}"!`
+                    );
                   } else {
                     await onBulkDelete(idsToDelete);
                     setSelectedIds([]);
+                    showFeedback(useTrash
+                      ? `Đã chuyển ${idsToDelete.length} profile vào Thùng rác!`
+                      : `Đã xóa vĩnh viễn ${idsToDelete.length} profile!`
+                    );
                   }
                 }}
-                className="px-4 py-1.5 rounded bg-rose-600 hover:bg-rose-700 text-white font-medium transition-colors text-xs flex items-center gap-1.5 shadow-md shadow-rose-950/20"
+                className={`px-4 py-1.5 rounded text-white font-medium transition-colors text-xs flex items-center gap-1.5 shadow-md ${
+                  useTrash
+                    ? "bg-amber-600 hover:bg-amber-700 shadow-amber-950/20"
+                    : "bg-rose-600 hover:bg-rose-700 shadow-rose-950/20"
+                }`}
               >
-                Xác nhận xóa
+                {useTrash ? "Chuyển vào Thùng rác" : "Xác nhận xóa vĩnh viễn"}
               </button>
             </div>
           </div>
@@ -1070,6 +1105,22 @@ export function ProfileTable({
             showFeedback(`Đã nhập thành công ${count} cookies!`);
           }}
           onCancel={() => setImportCookiesTarget(null)}
+        />
+      )}
+
+      {extensionTarget && (
+        <ExtensionDialog
+          profileIds={extensionTarget.ids}
+          profileName={extensionTarget.name}
+          onCancel={() => {
+            setExtensionTarget(null);
+            setSelectedIds([]);
+          }}
+          onSave={(msg) => {
+            setExtensionTarget(null);
+            setSelectedIds([]);
+            showFeedback(msg);
+          }}
         />
       )}
     </div>

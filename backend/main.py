@@ -18,7 +18,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 import httpx
-from fastapi import FastAPI, HTTPException, Request, Response, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Request, Response, WebSocket, WebSocketDisconnect, UploadFile, File, Form
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 import starlette.requests
@@ -633,6 +633,13 @@ async def create_profile(req: ProfileCreate):
     return _enrich_profile(profile, browser_mgr)
 
 
+# ── Recycle Bin routes MUST be defined BEFORE {profile_id} routes ──
+@app.get("/api/profiles/deleted", response_model=list[ProfileResponse])
+async def list_deleted_profiles():
+    profiles = db.list_deleted_profiles()
+    return [_enrich_profile(p, browser_mgr) for p in profiles]
+
+
 @app.get("/api/profiles/{profile_id}", response_model=ProfileResponse)
 async def get_profile(profile_id: str):
     profile = db.get_profile(profile_id)
@@ -662,39 +669,62 @@ async def delete_profile(profile_id: str):
 
     profile = db.get_profile(profile_id)
     if not profile:
-        raise HTTPException(status_code=404, detail="Profile not found")
+        # Check in deleted profiles just in case
+        deleted_list = db.list_deleted_profiles()
+        profile = next((p for p in deleted_list if p["id"] == profile_id), None)
+        if not profile:
+            raise HTTPException(status_code=404, detail="Profile not found")
+
+    app_settings = db.get_all_settings()
+    def to_bool(val) -> bool:
+        if not val:
+            return False
+        return str(val).lower() in ("true", "1", "yes", "on")
+        
+    no_trash = to_bool(app_settings.get("no_trash"))
+    
+    if no_trash:
+        # Xóa vĩnh viễn
+        user_data_dir = Path(profile["user_data_dir"])
+        db.delete_profile(profile_id)
+        if user_data_dir.exists():
+            shutil.rmtree(user_data_dir, ignore_errors=True)
+    else:
+        # Xóa tạm thời (đưa vào thùng rác)
+        db.soft_delete_profile(profile_id)
+
+    return {"ok": True}
+
+
+# (Đã chuyển route /api/profiles/deleted lên trên route {profile_id})
+
+
+@app.post("/api/profiles/{profile_id}/restore")
+async def restore_profile(profile_id: str):
+    success = db.restore_profile(profile_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Profile not found or restore failed")
+    return {"ok": True}
+
+
+@app.delete("/api/profiles/{profile_id}/force")
+async def force_delete_profile(profile_id: str):
+    # Stop browser if running
+    if profile_id in browser_mgr.running:
+        await browser_mgr.stop(profile_id)
+
+    # Check in deleted profiles
+    deleted_list = db.list_deleted_profiles()
+    profile = next((p for p in deleted_list if p["id"] == profile_id), None)
+    if not profile:
+        profile = db.get_profile(profile_id)
+        if not profile:
+            raise HTTPException(status_code=404, detail="Profile not found")
 
     user_data_dir = Path(profile["user_data_dir"])
-
-    # DB first — if this fails, filesystem is untouched
     db.delete_profile(profile_id)
-
-    # Then clean up disk or move to trash based on no_trash setting
     if user_data_dir.exists():
-        app_settings = db.get_all_settings()
-        def to_bool(val) -> bool:
-            if not val:
-                return False
-            return str(val).lower() in ("true", "1", "yes", "on")
-            
-        no_trash = to_bool(app_settings.get("no_trash"))
-        if no_trash:
-            shutil.rmtree(user_data_dir, ignore_errors=True)
-        else:
-            # Move to data/trash folder for safety
-            trash_root = user_data_dir.parent.parent / "trash"
-            trash_root.mkdir(parents=True, exist_ok=True)
-            import time
-            timestamp = int(time.time())
-            # Clean name from special path characters
-            clean_name = "".join(c for c in profile["name"] if c.isalnum() or c in (" ", "-", "_")).strip()
-            trash_dest = trash_root / f"{clean_name}_{profile_id}_{timestamp}"
-            try:
-                shutil.move(str(user_data_dir), str(trash_dest))
-            except Exception as e:
-                # Fallback to deletion if move fails
-                shutil.rmtree(user_data_dir, ignore_errors=True)
-
+        shutil.rmtree(user_data_dir, ignore_errors=True)
     return {"ok": True}
 
 
@@ -985,6 +1015,14 @@ async def bulk_stop_profiles(req: BulkActionRequest):
 async def bulk_delete_profiles(req: BulkActionRequest):
     success = []
     failed = {}
+    
+    app_settings = db.get_all_settings()
+    def to_bool(val) -> bool:
+        if not val:
+            return False
+        return str(val).lower() in ("true", "1", "yes", "on")
+    no_trash = to_bool(app_settings.get("no_trash"))
+
     for pid in req.profile_ids:
         try:
             if pid in browser_mgr.running:
@@ -993,13 +1031,65 @@ async def bulk_delete_profiles(req: BulkActionRequest):
             if not profile:
                 success.append(pid)
                 continue
+            
+            if no_trash:
+                user_data_dir = Path(profile["user_data_dir"])
+                db.delete_profile(pid)
+                if user_data_dir.exists():
+                    shutil.rmtree(user_data_dir, ignore_errors=True)
+            else:
+                db.soft_delete_profile(pid)
+            success.append(pid)
+        except Exception as exc:
+            logger.error("Bulk delete failed for %s: %s", pid, exc)
+            failed[pid] = str(exc)
+    return BulkActionResponse(success=success, failed=failed)
+
+
+@app.post("/api/profiles/bulk-restore", response_model=BulkActionResponse)
+async def bulk_restore_profiles(req: BulkActionRequest):
+    success = []
+    failed = {}
+    for pid in req.profile_ids:
+        try:
+            ok = db.restore_profile(pid)
+            if ok:
+                success.append(pid)
+            else:
+                failed[pid] = "Profile not found in Recycle Bin"
+        except Exception as exc:
+            logger.error("Bulk restore failed for %s: %s", pid, exc)
+            failed[pid] = str(exc)
+    return BulkActionResponse(success=success, failed=failed)
+
+
+@app.post("/api/profiles/bulk-force-delete", response_model=BulkActionResponse)
+async def bulk_force_delete_profiles(req: BulkActionRequest):
+    success = []
+    failed = {}
+    deleted_list = db.list_deleted_profiles()
+    deleted_map = {p["id"]: p for p in deleted_list}
+    
+    for pid in req.profile_ids:
+        try:
+            if pid in browser_mgr.running:
+                await browser_mgr.stop(pid)
+            
+            profile = deleted_map.get(pid)
+            if not profile:
+                profile = db.get_profile(pid)
+                
+            if not profile:
+                success.append(pid)
+                continue
+                
             user_data_dir = Path(profile["user_data_dir"])
             db.delete_profile(pid)
             if user_data_dir.exists():
                 shutil.rmtree(user_data_dir, ignore_errors=True)
             success.append(pid)
         except Exception as exc:
-            logger.error("Bulk delete failed for %s: %s", pid, exc)
+            logger.error("Bulk force delete failed for %s: %s", pid, exc)
             failed[pid] = str(exc)
     return BulkActionResponse(success=success, failed=failed)
 
@@ -1108,6 +1198,7 @@ async def bulk_group(req: BulkGroupRequest):
 async def bulk_clear_cache(req: BulkActionRequest):
     success = []
     failed = {}
+    from .browser_manager import clear_profile_cache_folders
     for pid in req.profile_ids:
         try:
             profile = db.get_profile(pid)
@@ -1118,12 +1209,7 @@ async def bulk_clear_cache(req: BulkActionRequest):
                 failed[pid] = "Profile is currently running"
                 continue
             user_data_dir = Path(profile["user_data_dir"])
-            default_dir = user_data_dir / "Default"
-            if default_dir.exists():
-                for cache_name in ("Cache", "Code Cache", "GPUCache", "Storage"):
-                    cache_path = default_dir / cache_name
-                    if cache_path.exists():
-                        shutil.rmtree(cache_path, ignore_errors=True)
+            await clear_profile_cache_folders(user_data_dir)
             success.append(pid)
         except Exception as exc:
             failed[pid] = str(exc)
@@ -1798,6 +1884,178 @@ async def select_folder():
     except Exception as e:
         logger.error("Lỗi khi mở Folder Browser Dialog qua PowerShell: %s", e)
         raise HTTPException(status_code=500, detail=f"Không thể mở hộp thoại chọn thư mục: {e}")
+
+
+# ── Extension Endpoints ───────────────────────────────────────────────────────
+
+from .models import (
+    ExtensionResponse,
+    ProfileExtensionResponse,
+    ProfileExtensionUpdateRequest,
+    ProfileExtensionToggleRequest,
+    BulkExtensionUpdateRequest,
+)
+import zipfile
+import uuid
+
+@app.get("/api/extensions", response_model=list[ExtensionResponse])
+async def list_extensions():
+    """List all registered extensions."""
+    exts = db.get_all_extensions()
+    return [
+        ExtensionResponse(
+            id=e["id"],
+            name=e["name"],
+            version=e["version"],
+            path=e["path"],
+            is_shared=bool(e["is_shared"]),
+            created_at=e["created_at"]
+        ) for e in exts
+    ]
+
+@app.post("/api/extensions/upload", response_model=ExtensionResponse)
+async def upload_extension(
+    file: UploadFile = File(...),
+    is_shared: bool = Form(False)
+):
+    """Upload a Chrome extension zip and extract it."""
+    if not file.filename or not file.filename.endswith(".zip"):
+        raise HTTPException(status_code=400, detail="Chỉ hỗ trợ tải lên file nén định dạng .zip.")
+
+    ext_id = str(uuid.uuid4())
+    ext_dir = db.DATA_DIR / "extensions" / ext_id
+    ext_dir.mkdir(parents=True, exist_ok=True)
+
+    zip_path = ext_dir / "extension.zip"
+    try:
+        # Save zip file
+        with open(zip_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+
+        # Extract zip file
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            zip_ref.extractall(ext_dir)
+
+        # Remove the zip file after extraction
+        zip_path.unlink()
+
+        # Find manifest.json to read name and version
+        manifest_path = ext_dir / "manifest.json"
+        # In case the zip contains a nested folder (e.g. extension_name/manifest.json)
+        if not manifest_path.exists():
+            # Search one level deep
+            nested_manifests = list(ext_dir.glob("*/manifest.json"))
+            if nested_manifests:
+                manifest_path = nested_manifests[0]
+                actual_ext_path = manifest_path.parent
+            else:
+                raise HTTPException(status_code=400, detail="Không tìm thấy tệp manifest.json hợp lệ trong file zip.")
+        else:
+            actual_ext_path = ext_dir
+
+        # Read manifest.json
+        import json
+        with open(manifest_path, "r", encoding="utf-8") as f:
+            manifest = json.load(f)
+        
+        ext_name = manifest.get("name", "Unknown Extension")
+        if ext_name.startswith("__MSG_") and ext_name.endswith("__"):
+            ext_name = file.filename.rsplit(".", 1)[0]
+            
+        ext_version = manifest.get("version", "1.0")
+
+        # Create record in DB
+        res = db.create_extension(
+            id=ext_id,
+            name=ext_name,
+            version=ext_version,
+            path=str(actual_ext_path),
+            is_shared=is_shared
+        )
+        return ExtensionResponse(
+            id=res["id"],
+            name=res["name"],
+            version=res["version"],
+            path=res["path"],
+            is_shared=bool(res["is_shared"]),
+            created_at=res["created_at"]
+        )
+
+    except Exception as e:
+        if ext_dir.exists():
+            shutil.rmtree(ext_dir, ignore_errors=True)
+        logger.error("Lỗi khi tải và cài đặt extension: %s", e)
+        raise HTTPException(status_code=500, detail=f"Lỗi khi cài đặt extension: {e}")
+
+@app.delete("/api/extensions/{ext_id}")
+async def delete_extension(ext_id: str):
+    """Delete extension and its folder."""
+    exts = db.get_all_extensions()
+    target = None
+    for e in exts:
+        if e["id"] == ext_id:
+            target = e
+            break
+
+    if not target:
+        raise HTTPException(status_code=404, detail="Không tìm thấy extension.")
+
+    try:
+        db.delete_extension(ext_id)
+        uuid_dir = db.DATA_DIR / "extensions" / ext_id
+        if uuid_dir.exists():
+            shutil.rmtree(uuid_dir, ignore_errors=True)
+        else:
+            ext_path = Path(target["path"])
+            if ext_path.exists():
+                shutil.rmtree(ext_path, ignore_errors=True)
+
+        return {"ok": True}
+    except Exception as e:
+        logger.error("Lỗi khi xóa extension: %s", e)
+        raise HTTPException(status_code=500, detail=f"Lỗi khi xóa extension: {e}")
+
+@app.get("/api/profiles/{profile_id}/extensions", response_model=list[ProfileExtensionResponse])
+async def get_profile_extensions(profile_id: str):
+    """Get extensions assigned to a profile."""
+    p = db.get_profile(profile_id)
+    if not p:
+        raise HTTPException(status_code=404, detail="Không tìm thấy profile.")
+
+    exts = db.get_profile_extensions(profile_id)
+    return [
+        ProfileExtensionResponse(
+            id=e["id"],
+            name=e["name"],
+            version=e["version"],
+            path=e["path"],
+            is_shared=bool(e["is_shared"]),
+            is_enabled=bool(e["is_enabled"])
+        ) for e in exts
+    ]
+
+@app.post("/api/profiles/{profile_id}/extensions")
+async def update_profile_extensions(profile_id: str, body: ProfileExtensionUpdateRequest):
+    """Update extensions assigned to a profile."""
+    p = db.get_profile(profile_id)
+    if not p:
+        raise HTTPException(status_code=404, detail="Không tìm thấy profile.")
+
+    ext_list = [item.model_dump() for item in body.extensions]
+    db.update_profile_extensions(profile_id, ext_list)
+    return {"ok": True}
+
+@app.post("/api/profiles/{profile_id}/extensions/{ext_id}/toggle")
+async def toggle_profile_extension(profile_id: str, ext_id: str, body: ProfileExtensionToggleRequest):
+    """Toggle profile's extension state."""
+    db.toggle_profile_extension(profile_id, ext_id, body.is_enabled)
+    return {"ok": True}
+
+@app.post("/api/profiles/bulk/extensions")
+async def bulk_update_extensions(body: BulkExtensionUpdateRequest):
+    """Apply extensions to multiple profiles."""
+    db.bulk_update_profiles_extensions(body.profile_ids, body.extension_ids, body.mode)
+    return {"ok": True}
 
 
 # ── Static Frontend ───────────────────────────────────────────────────────────

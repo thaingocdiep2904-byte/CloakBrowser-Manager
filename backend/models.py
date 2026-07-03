@@ -262,3 +262,41 @@ class AppSettings(BaseModel):
     shared_extensions: str | None = "[]"
     auto_update_cloakbrowser: bool | None = False
 
+
+class ExtensionResponse(BaseModel):
+    id: str
+    name: str
+    version: str | None = None
+    path: str
+    is_shared: bool
+    created_at: str
+
+
+class ProfileExtensionResponse(BaseModel):
+    id: str
+    name: str
+    version: str | None = None
+    path: str
+    is_shared: bool
+    is_enabled: bool
+
+
+class ProfileExtensionItem(BaseModel):
+    id: str
+    is_enabled: bool
+
+
+class ProfileExtensionUpdateRequest(BaseModel):
+    extensions: list[ProfileExtensionItem]
+
+
+class ProfileExtensionToggleRequest(BaseModel):
+    is_enabled: bool
+
+
+class BulkExtensionUpdateRequest(BaseModel):
+    profile_ids: list[str]
+    extension_ids: list[str]
+    mode: Literal["append", "overwrite"]
+
+

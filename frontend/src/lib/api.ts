@@ -142,17 +142,37 @@ async function request<T>(
   path: string,
   options?: RequestInit,
 ): Promise<T> {
+  const headers: Record<string, string> = {};
+  if (!(options?.body instanceof FormData)) {
+    headers["Content-Type"] = "application/json";
+  }
+
   const res = await fetch(path, {
-    headers: { "Content-Type": "application/json" },
     ...options,
+    headers: {
+      ...headers,
+      ...(options?.headers as Record<string, string>),
+    },
   });
   if (!res.ok) {
     if (res.status === 401 && _onUnauthorized) {
       _onUnauthorized();
       throw new ApiError(401, "Unauthorized");
     }
-    const body = await res.json().catch(() => ({ detail: res.statusText }));
-    throw new ApiError(res.status, body.detail || res.statusText);
+    let errorMsg = res.statusText;
+    try {
+      const body = await res.json();
+      if (body.detail) {
+        if (typeof body.detail === "string") {
+          errorMsg = body.detail;
+        } else {
+          errorMsg = JSON.stringify(body.detail);
+        }
+      }
+    } catch {
+      // ignore
+    }
+    throw new ApiError(res.status, errorMsg);
   }
   return res.json();
 }
@@ -306,7 +326,95 @@ export const api = {
     request<{ path: string | null }>("/api/settings/select-folder", {
       method: "POST",
     }),
+
+  // Extension APIs
+  getExtensions: () =>
+    request<Extension[]>("/api/extensions"),
+
+  uploadExtension: (file: File, isShared: boolean) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("is_shared", isShared ? "true" : "false");
+    return request<Extension>("/api/extensions/upload", {
+      method: "POST",
+      body: formData,
+    });
+  },
+
+  deleteExtension: (id: string) =>
+    request<{ ok: boolean }>(`/api/extensions/${id}`, {
+      method: "DELETE",
+    }),
+
+  getProfileExtensions: (profileId: string) =>
+    request<ProfileExtension[]>(`/api/profiles/${profileId}/extensions`),
+
+  updateProfileExtensions: (profileId: string, extensions: { id: string; is_enabled: boolean }[]) =>
+    request<{ ok: boolean }>(`/api/profiles/${profileId}/extensions`, {
+      method: "POST",
+      body: JSON.stringify({ extensions }),
+    }),
+
+  toggleProfileExtension: (profileId: string, extId: string, isEnabled: boolean) =>
+    request<{ ok: boolean }>(`/api/profiles/${profileId}/extensions/${extId}/toggle`, {
+      method: "POST",
+      body: JSON.stringify({ is_enabled: isEnabled }),
+    }),
+
+  bulkUpdateExtensions: (profileIds: string[], extensionIds: string[], mode: "append" | "overwrite") =>
+    request<{ ok: boolean }>("/api/profiles/bulk/extensions", {
+      method: "POST",
+      body: JSON.stringify({
+        profile_ids: profileIds,
+        extension_ids: extensionIds,
+        mode: mode,
+      }),
+    }),
+
+  getDeletedProfiles: () =>
+    request<Profile[]>("/api/profiles/deleted"),
+
+  restoreProfile: (id: string) =>
+    request<{ ok: boolean }>(`/api/profiles/${id}/restore`, {
+      method: "POST",
+    }),
+
+  forceDeleteProfile: (id: string) =>
+    request<{ ok: boolean }>(`/api/profiles/${id}/force`, {
+      method: "DELETE",
+    }),
+
+  bulkRestoreProfiles: (ids: string[]) =>
+    request<BulkActionResult>("/api/profiles/bulk-restore", {
+      method: "POST",
+      body: JSON.stringify({ profile_ids: ids }),
+    }),
+
+  bulkForceDeleteProfiles: (ids: string[]) =>
+    request<BulkActionResult>("/api/profiles/bulk-force-delete", {
+      method: "POST",
+      body: JSON.stringify({ profile_ids: ids }),
+    }),
 };
+
+export interface Extension {
+  id: string;
+  name: string;
+  version: string | null;
+  path: string;
+  is_shared: boolean;
+  created_at: string;
+}
+
+export interface ProfileExtension {
+  id: string;
+  name: string;
+  version: string | null;
+  path: string;
+  is_shared: boolean;
+  is_enabled: boolean;
+}
+
 
 export interface AppSettings {
   profile_path?: string;

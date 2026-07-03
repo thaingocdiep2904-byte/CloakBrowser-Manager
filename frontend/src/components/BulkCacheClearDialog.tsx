@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { X, AlertTriangle } from "lucide-react";
+import { X, AlertTriangle, Save, Loader2 } from "lucide-react";
 
 interface BulkCacheClearDialogProps {
   profileIds: string[];
@@ -28,14 +28,28 @@ export function BulkCacheClearDialog({ profileIds, onSave, onCancel }: BulkCache
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 animate-fade-in backdrop-blur-xs">
-      <div className="bg-surface-1 border border-border rounded-lg shadow-2xl w-full max-w-md flex flex-col relative animate-scale-up">
+      <form onSubmit={handleSubmit} className="bg-surface-1 border border-border rounded-lg shadow-2xl w-full max-w-md flex flex-col relative animate-scale-up">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-surface-2 rounded-t-lg">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-surface-2 rounded-t-lg relative">
           <h2 className="text-sm font-semibold text-white flex items-center gap-1.5">
             <AlertTriangle className="h-4 w-4 text-yellow-500" />
             <span>Xóa Cache Hàng Loạt</span>
           </h2>
-          <button onClick={onCancel} className="text-gray-400 hover:text-white transition-colors">
+          <div className="flex items-center gap-2 mr-8">
+            <button
+              type="submit"
+              disabled={saving}
+              className="px-4 py-1.5 rounded bg-rose-600 hover:bg-rose-700 text-white font-medium transition-colors text-xs flex items-center gap-1.5 shadow-md shadow-rose-950/20 disabled:opacity-50"
+            >
+              {saving ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Save className="h-3.5 w-3.5" />
+              )}
+              <span>Xác nhận xóa</span>
+            </button>
+          </div>
+          <button type="button" onClick={onCancel} className="absolute top-4 right-4 text-gray-400 hover:text-white p-1 rounded hover:bg-surface-3 transition-colors z-20" title="Đóng không lưu">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -47,7 +61,7 @@ export function BulkCacheClearDialog({ profileIds, onSave, onCancel }: BulkCache
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="p-5 space-y-4 text-xs text-gray-300">
+        <div className="p-5 space-y-4 text-xs text-gray-300">
           <div className="space-y-3">
             <p className="leading-relaxed text-gray-200">
               Bạn có chắc chắn muốn xóa Cache dữ liệu tạm thời cho <strong className="text-accent text-sm">{profileIds.length}</strong> profile đã chọn?
@@ -61,26 +75,8 @@ export function BulkCacheClearDialog({ profileIds, onSave, onCancel }: BulkCache
               </ul>
             </div>
           </div>
-
-          {/* Footer Actions */}
-          <div className="flex items-center justify-end gap-2 border-t border-border pt-4 mt-2">
-            <button
-              type="button"
-              onClick={onCancel}
-              className="px-4 py-1.5 rounded bg-surface-3 hover:bg-surface-4 text-gray-300 font-medium transition-colors"
-            >
-              Hủy
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="px-4 py-1.5 rounded bg-rose-600 hover:bg-rose-700 text-white font-medium transition-colors"
-            >
-              {saving ? "Đang xóa..." : "Xác nhận xóa"}
-            </button>
-          </div>
-        </form>
-      </div>
+        </div>
+      </form>
     </div>
   );
 }

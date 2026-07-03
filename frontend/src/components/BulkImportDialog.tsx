@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { X, Upload, FileText } from "lucide-react";
+import { X, Upload, FileText, Save, Loader2 } from "lucide-react";
 
 interface BulkImportDialogProps {
   onImport: (profiles: { name: string; proxy?: string; notes?: string }[]) => Promise<any>;
@@ -115,14 +115,30 @@ export function BulkImportDialog({ onImport, onCancel }: BulkImportDialogProps) 
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 animate-fade-in backdrop-blur-xs">
-      <div className="bg-surface-1 border border-border rounded-lg shadow-2xl w-full max-w-lg flex flex-col relative animate-scale-up">
+      <form onSubmit={handleSubmit} className="bg-surface-1 border border-border rounded-lg shadow-2xl w-full max-w-lg flex flex-col relative animate-scale-up">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-surface-2 rounded-t-lg">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-surface-2 rounded-t-lg relative">
           <h2 className="text-sm font-semibold text-white flex items-center gap-1.5">
             <Upload className="h-4 w-4 text-emerald-500" />
             <span>Nhập Profile Từ File Excel/CSV</span>
           </h2>
-          <button onClick={onCancel} className="text-gray-400 hover:text-white transition-colors">
+          <div className="flex items-center gap-2 mr-8">
+            <button
+              type="submit"
+              disabled={saving || !file}
+              className={`px-4 py-1.5 rounded text-white font-medium transition-colors text-xs flex items-center gap-1.5 shadow-md shadow-emerald-950/20 ${
+                file ? "bg-emerald-600 hover:bg-emerald-700" : "bg-emerald-800 opacity-55 cursor-not-allowed"
+              }`}
+            >
+              {saving ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Save className="h-3.5 w-3.5" />
+              )}
+              <span>Xác nhận nhập</span>
+            </button>
+          </div>
+          <button type="button" onClick={onCancel} className="absolute top-4 right-4 text-gray-400 hover:text-white p-1 rounded hover:bg-surface-3 transition-colors z-20" title="Đóng không lưu">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -134,7 +150,7 @@ export function BulkImportDialog({ onImport, onCancel }: BulkImportDialogProps) 
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="p-5 space-y-4 text-xs text-gray-300">
+        <div className="p-5 space-y-4 text-xs text-gray-300">
           <div>
             <span className="text-[11px] text-gray-400 block mb-3 leading-relaxed">
               Tải lên file CSV được xuất từ Excel để nhập hàng loạt profile. Tệp tin của bạn cần có định dạng sau:
@@ -179,28 +195,8 @@ export function BulkImportDialog({ onImport, onCancel }: BulkImportDialogProps) 
               </div>
             </div>
           )}
-
-          {/* Footer Actions */}
-          <div className="flex items-center justify-end gap-2 border-t border-border pt-4 mt-2">
-            <button
-              type="button"
-              onClick={onCancel}
-              className="px-4 py-1.5 rounded bg-surface-3 hover:bg-surface-4 text-gray-300 font-medium transition-colors"
-            >
-              Hủy
-            </button>
-            <button
-              type="submit"
-              disabled={saving || !file}
-              className={`px-4 py-1.5 rounded text-white font-medium transition-colors ${
-                file ? "bg-emerald-600 hover:bg-emerald-700" : "bg-emerald-800 opacity-55 cursor-not-allowed"
-              }`}
-            >
-              {saving ? "Đang nhập..." : "Xác nhận nhập"}
-            </button>
-          </div>
-        </form>
-      </div>
+        </div>
+      </form>
     </div>
   );
 }

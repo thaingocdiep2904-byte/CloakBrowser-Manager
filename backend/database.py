@@ -70,7 +70,8 @@ def init_db():
                 device_memory INTEGER DEFAULT 4,
                 mac_address TEXT,
                 browser_brand TEXT,
-                storage_quota INTEGER
+                storage_quota INTEGER,
+                is_deleted BOOLEAN DEFAULT 0
             );
 
             CREATE TABLE IF NOT EXISTS profile_tags (
@@ -83,6 +84,22 @@ def init_db():
             CREATE TABLE IF NOT EXISTS settings (
                 key TEXT PRIMARY KEY,
                 value TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS extensions (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                version TEXT,
+                path TEXT NOT NULL,
+                is_shared BOOLEAN DEFAULT 0,
+                created_at TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS profile_extensions (
+                profile_id TEXT REFERENCES profiles(id) ON DELETE CASCADE,
+                extension_id TEXT REFERENCES extensions(id) ON DELETE CASCADE,
+                is_enabled BOOLEAN DEFAULT 1,
+                PRIMARY KEY (profile_id, extension_id)
             );
         """)
         conn.commit()
@@ -100,6 +117,9 @@ def init_db():
             conn.commit()
         if "last_run" not in cols:
             conn.execute("ALTER TABLE profiles ADD COLUMN last_run TEXT")
+            conn.commit()
+        if "is_deleted" not in cols:
+            conn.execute("ALTER TABLE profiles ADD COLUMN is_deleted BOOLEAN DEFAULT 0")
             conn.commit()
             
         # Hardware fingerprints migrations
@@ -224,7 +244,7 @@ def get_profile(profile_id: str) -> dict[str, Any] | None:
 
 def list_profiles() -> list[dict[str, Any]]:
     with get_db() as conn:
-        rows = conn.execute("SELECT * FROM profiles ORDER BY created_at DESC").fetchall()
+        rows = conn.execute("SELECT * FROM profiles WHERE is_deleted = 0 ORDER BY created_at DESC").fetchall()
         profiles = []
         for row in rows:
             profile = dict(row)
@@ -236,6 +256,42 @@ def list_profiles() -> list[dict[str, Any]]:
             profile["tags"] = [dict(t) for t in tags]
             profiles.append(profile)
         return profiles
+
+
+def list_deleted_profiles() -> list[dict[str, Any]]:
+    with get_db() as conn:
+        rows = conn.execute("SELECT * FROM profiles WHERE is_deleted = 1 ORDER BY created_at DESC").fetchall()
+        profiles = []
+        for row in rows:
+            profile = dict(row)
+            profile["launch_args"] = json.loads(profile.get("launch_args") or "[]")
+            tags = conn.execute(
+                "SELECT tag, color FROM profile_tags WHERE profile_id = ?",
+                (profile["id"],),
+            ).fetchall()
+            profile["tags"] = [dict(t) for t in tags]
+            profiles.append(profile)
+        return profiles
+
+
+def soft_delete_profile(profile_id: str) -> bool:
+    with get_db() as conn:
+        cursor = conn.execute(
+            "UPDATE profiles SET is_deleted = 1 WHERE id = ?",
+            (profile_id,),
+        )
+        conn.commit()
+        return cursor.rowcount > 0
+
+
+def restore_profile(profile_id: str) -> bool:
+    with get_db() as conn:
+        cursor = conn.execute(
+            "UPDATE profiles SET is_deleted = 0 WHERE id = ?",
+            (profile_id,),
+        )
+        conn.commit()
+        return cursor.rowcount > 0
 
 
 def update_profile(profile_id: str, **fields: Any) -> dict[str, Any] | None:
@@ -433,4 +489,97 @@ def get_profiles_dir() -> Path:
     if path:
         return Path(path)
     return DATA_DIR / "profiles"
+
+
+def get_all_extensions() -> list[dict[str, Any]]:
+    """Retrieve all registered extensions."""
+    with get_db() as conn:
+        rows = conn.execute("SELECT id, name, version, path, is_shared, created_at FROM extensions").fetchall()
+        return [dict(row) for row in rows]
+
+
+def create_extension(id: str, name: str, version: str | None, path: str, is_shared: bool = False) -> dict[str, Any]:
+    """Register a new extension."""
+    now = _now()
+    with get_db() as conn:
+        conn.execute(
+            "INSERT INTO extensions (id, name, version, path, is_shared, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+            (id, name, version, path, 1 if is_shared else 0, now),
+        )
+        conn.commit()
+    return {
+        "id": id,
+        "name": name,
+        "version": version,
+        "path": path,
+        "is_shared": is_shared,
+        "created_at": now,
+    }
+
+
+def delete_extension(ext_id: str) -> None:
+    """Delete an extension registration."""
+    with get_db() as conn:
+        conn.execute("DELETE FROM extensions WHERE id = ?", (ext_id,))
+        conn.commit()
+
+
+def get_profile_extensions(profile_id: str) -> list[dict[str, Any]]:
+    """Get extensions assigned to a profile, joined with extension details."""
+    with get_db() as conn:
+        rows = conn.execute(
+            """
+            SELECT e.id, e.name, e.version, e.path, e.is_shared, pe.is_enabled
+            FROM profile_extensions pe
+            JOIN extensions e ON pe.extension_id = e.id
+            WHERE pe.profile_id = ?
+            """,
+            (profile_id,),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+
+def update_profile_extensions(profile_id: str, extensions: list[dict[str, Any]]) -> None:
+    """Set the exact extensions and their states for a profile."""
+    with get_db() as conn:
+        # Delete old associations
+        conn.execute("DELETE FROM profile_extensions WHERE profile_id = ?", (profile_id,))
+        # Insert new associations
+        for ext in extensions:
+            conn.execute(
+                "INSERT INTO profile_extensions (profile_id, extension_id, is_enabled) VALUES (?, ?, ?)",
+                (profile_id, ext["id"], 1 if ext["is_enabled"] else 0),
+            )
+        conn.commit()
+
+
+def toggle_profile_extension(profile_id: str, extension_id: str, is_enabled: bool) -> None:
+    """Toggle a profile's extension enabled state."""
+    with get_db() as conn:
+        conn.execute(
+            "UPDATE profile_extensions SET is_enabled = ? WHERE profile_id = ? AND extension_id = ?",
+            (1 if is_enabled else 0, profile_id, extension_id),
+        )
+        conn.commit()
+
+
+def bulk_update_profiles_extensions(profile_ids: list[str], extension_ids: list[str], mode: str) -> None:
+    """Apply extensions to multiple profiles (append or overwrite)."""
+    with get_db() as conn:
+        if mode == "overwrite":
+            for pid in profile_ids:
+                conn.execute("DELETE FROM profile_extensions WHERE profile_id = ?", (pid,))
+                for ext_id in extension_ids:
+                    conn.execute(
+                        "INSERT INTO profile_extensions (profile_id, extension_id, is_enabled) VALUES (?, ?, 1)",
+                        (pid, ext_id),
+                    )
+        else:  # append
+            for pid in profile_ids:
+                for ext_id in extension_ids:
+                    conn.execute(
+                        "INSERT OR IGNORE INTO profile_extensions (profile_id, extension_id, is_enabled) VALUES (?, ?, 1)",
+                        (pid, ext_id),
+                    )
+        conn.commit()
 

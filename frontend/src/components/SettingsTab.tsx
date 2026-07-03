@@ -1,8 +1,12 @@
 import { useState, useEffect } from "react";
-import { Sparkles, RotateCw, Save, AlertTriangle } from "lucide-react";
-import { api, type AppSettings } from "../lib/api";
+import { RotateCw, Save, AlertTriangle, Puzzle, Trash2, Upload, Loader2 } from "lucide-react";
+import { api, type AppSettings, type Extension } from "../lib/api";
 
-export function SettingsTab() {
+interface SettingsTabProps {
+  showFeedback?: (msg: string) => void;
+}
+
+export function SettingsTab({ showFeedback }: SettingsTabProps) {
   const [settings, setSettings] = useState<AppSettings>({
     profile_path: "",
     compression_mode: "default",
@@ -21,7 +25,89 @@ export function SettingsTab() {
   });
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
+
+  const [extensions, setExtensions] = useState<Extension[]>([]);
+  const [loadingExts, setLoadingExts] = useState(true);
+  const [uploadingExt, setUploadingExt] = useState(false);
+  const [extError, setExtError] = useState<string | null>(null);
+  const [defaultExtIds, setDefaultExtIds] = useState<string[]>([]);
+
+  const fetchExtensions = async () => {
+    setLoadingExts(true);
+    try {
+      const exts = await api.getExtensions();
+      setExtensions(exts);
+    } catch (err) {
+      console.error("Failed to load extensions:", err);
+    } finally {
+      setLoadingExts(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchExtensions();
+  }, []);
+
+  useEffect(() => {
+    if (settings.default_extensions) {
+      try {
+        const parsed = JSON.parse(settings.default_extensions);
+        setDefaultExtIds(Array.isArray(parsed) ? parsed : []);
+      } catch {
+        setDefaultExtIds([]);
+      }
+    }
+  }, [settings.default_extensions]);
+
+  const handleToggleDefaultExt = (extId: string) => {
+    setDefaultExtIds((prev: string[]) => {
+      const updated = prev.includes(extId)
+        ? prev.filter((id: string) => id !== extId)
+        : [...prev, extId];
+      setSettings((prevSettings: AppSettings) => ({
+        ...prevSettings,
+        default_extensions: JSON.stringify(updated),
+      }));
+      return updated;
+    });
+  };
+
+  const handleUploadExt = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.name.endsWith(".zip")) {
+      setExtError("Vui lòng tải lên file định dạng zip.");
+      return;
+    }
+    setUploadingExt(true);
+    setExtError(null);
+    try {
+      const newExt = await api.uploadExtension(file, true);
+      setExtensions((prev: Extension[]) => [...prev, newExt]);
+    } catch (err) {
+      setExtError(err instanceof Error ? err.message : "Tải lên thất bại.");
+    } finally {
+      setUploadingExt(false);
+    }
+  };
+
+  const handleDeleteExt = async (extId: string) => {
+    if (!confirm("Bạn có chắc chắn muốn xóa extension này khỏi hệ thống không? Tất cả các profile đang sử dụng sẽ bị gỡ bỏ tiện ích này.")) return;
+    try {
+      await api.deleteExtension(extId);
+      setExtensions((prev: Extension[]) => prev.filter((e: Extension) => e.id !== extId));
+      setDefaultExtIds((prev: string[]) => {
+        const updated = prev.filter((id: string) => id !== extId);
+        setSettings((prevSettings: AppSettings) => ({
+          ...prevSettings,
+          default_extensions: JSON.stringify(updated),
+        }));
+        return updated;
+      });
+    } catch (err) {
+      setExtError(err instanceof Error ? err.message : "Xóa thất bại.");
+    }
+  };
 
   const fetchSettings = async () => {
     setLoading(true);
@@ -30,13 +116,9 @@ export function SettingsTab() {
       setSettings(data);
     } catch (err) {
       console.error("Failed to load settings:", err);
-    } fillly: {
+    } finally {
       setLoading(false);
     }
-  };
-
-  const fillly = () => {
-    setLoading(false);
   };
 
   useEffect(() => {
@@ -48,7 +130,7 @@ export function SettingsTab() {
       .catch((err) => {
         console.error("Failed to load settings:", err);
       })
-      .finally(fillly);
+      .finally(() => setLoading(false));
   }, []);
 
   const handleSelectFolder = async (field: "profile_path") => {
@@ -64,12 +146,15 @@ export function SettingsTab() {
 
   const handleSave = async () => {
     setSaving(true);
-    setMessage(null);
     try {
       await api.updateSettings(settings);
-      setMessage({ text: "Đã lưu cài đặt thành công! Một số thay đổi sẽ có hiệu lực sau khi khởi động lại ứng dụng.", type: "success" });
+      if (showFeedback) {
+        showFeedback("Đã lưu cài đặt thành công!");
+      }
     } catch (err) {
-      setMessage({ text: "Lỗi khi lưu cài đặt: " + (err instanceof Error ? err.message : String(err)), type: "error" });
+      if (showFeedback) {
+        showFeedback("Lỗi khi lưu cài đặt: " + (err instanceof Error ? err.message : String(err)));
+      }
     } finally {
       setSaving(false);
     }
@@ -89,12 +174,21 @@ export function SettingsTab() {
     <div className="flex-1 bg-surface-0 overflow-y-auto p-6 text-gray-200">
       {/* Top Header */}
       <div className="flex items-center justify-between border-b border-border pb-4 mb-6">
-        <h1 className="text-xl font-bold text-white tracking-wide">Setting</h1>
+        <h1 className="text-xl font-bold text-white tracking-wide">Cài đặt hệ thống</h1>
         <div className="flex items-center gap-3">
-          <button className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-2 hover:bg-surface-3 border border-border rounded text-xs transition-colors">
-            <Sparkles className="h-3.5 w-3.5 text-yellow-400" />
-            <span>AI Support</span>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="px-4 py-1.5 rounded bg-accent hover:bg-accent/90 text-white transition-colors font-medium flex items-center gap-1.5 text-xs shadow-md shadow-violet-950/20 disabled:opacity-50"
+          >
+            {saving ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Save className="h-3.5 w-3.5" />
+            )}
+            <span>{saving ? "Đang lưu..." : "Lưu cài đặt"}</span>
           </button>
+
           <button
             onClick={fetchSettings}
             className="p-1.5 bg-surface-2 hover:bg-surface-3 border border-border rounded text-gray-400 hover:text-white transition-colors"
@@ -105,17 +199,6 @@ export function SettingsTab() {
         </div>
       </div>
 
-      {message && (
-        <div
-          className={`p-3 rounded mb-6 text-sm border ${
-            message.type === "success"
-              ? "bg-green-500/15 border-green-500/30 text-green-400"
-              : "bg-red-500/15 border-red-500/30 text-red-400"
-          }`}
-        >
-          {message.text}
-        </div>
-      )}
 
       {/* Warning Text */}
       <div className="flex items-start gap-2 bg-yellow-500/10 border border-yellow-500/20 text-yellow-500/80 p-3 rounded text-xs mb-6 leading-relaxed">
@@ -260,11 +343,11 @@ export function SettingsTab() {
             <label className="flex items-center gap-2 cursor-pointer text-xs">
               <input
                 type="checkbox"
-                checked={settings.no_trash}
-                onChange={(e) => setSettings((prev) => ({ ...prev, no_trash: e.target.checked }))}
+                checked={!settings.no_trash}
+                onChange={(e) => setSettings((prev) => ({ ...prev, no_trash: !e.target.checked }))}
                 className="rounded border-border bg-surface-2 accent-primary h-4 w-4"
               />
-              <span>Không sử dụng thùng rác profile</span>
+              <span>Sử dụng chế độ thùng rác profile</span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer text-xs">
               <input
@@ -290,52 +373,110 @@ export function SettingsTab() {
 
         {/* Section 4: Extensions */}
         <div className="border-t border-border/60 pt-6 space-y-4">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-gray-400">Extensions</h2>
-
-          <div className="space-y-4">
-            <div className="space-y-1">
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-semibold text-gray-400 w-36">Extension mặc định</span>
-                <button
-                  onClick={() => alert("Chỉnh sửa Extension mặc định sẽ mở thư mục extension chung.")}
-                  className="px-3 py-1 bg-surface-2 hover:bg-surface-3 border border-border text-xs rounded transition-colors"
-                >
-                  Sửa Extension
-                </button>
-              </div>
-              <p className="text-[11px] text-gray-500 max-w-xl">
-                Extension sẽ được cài đặt trực tiếp vào thư mục của profile khi khởi tạo. Dung lượng của profile sẽ bao gồm cả dung lượng các extension được cài đặt thêm
-              </p>
-            </div>
-
-            <div className="space-y-1">
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-semibold text-gray-400 w-36">Extension dùng chung</span>
-                <button
-                  onClick={() => alert("Chỉnh sửa Extension dùng chung sẽ mở bảng quản lý extension.")}
-                  className="px-3 py-1 bg-surface-2 hover:bg-surface-3 border border-border text-xs rounded transition-colors"
-                >
-                  Chỉnh sửa
-                </button>
-              </div>
-              <p className="text-[11px] text-gray-500 max-w-xl">
-                Extension sẽ được cài đặt một lần duy nhất ngay trên local PC, việc này giúp giảm đáng kể dung lượng lưu trữ. Tuy nhiên nếu bạn import profile sang một máy tính khác, máy tính đó cũng sẽ cần cài đặt extension này tại mục Cài đặt
-              </p>
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-gray-400">Kho Extension Hệ Thống</h2>
+            
+            {/* Upload Button */}
+            <div className="relative overflow-hidden cursor-pointer bg-violet-600 hover:bg-violet-700 text-white font-medium text-xs py-1.5 px-3 rounded flex items-center gap-1.5 transition-all select-none">
+              <input
+                type="file"
+                accept=".zip"
+                onChange={handleUploadExt}
+                disabled={uploadingExt}
+                className="absolute inset-0 opacity-0 cursor-pointer"
+              />
+              {uploadingExt ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <span>Đang cài đặt...</span>
+                </>
+              ) : (
+                <>
+                  <Upload className="h-3.5 w-3.5" />
+                  <span>Thêm Extension (.zip)</span>
+                </>
+              )}
             </div>
           </div>
+
+          {extError && (
+            <div className="p-2.5 bg-rose-950/30 border border-rose-800/40 text-rose-300 text-[11px] rounded">
+              {extError}
+            </div>
+          )}
+
+          {loadingExts ? (
+            <div className="flex items-center justify-center py-8 gap-2 text-xs text-gray-400">
+              <Loader2 className="h-4 w-4 text-violet-500 animate-spin" />
+              <span>Đang tải danh sách tiện ích...</span>
+            </div>
+          ) : extensions.length === 0 ? (
+            <div className="p-4 bg-surface-2/40 border border-border/50 rounded-md text-center text-gray-500 italic text-xs">
+              Chưa có extension nào trong hệ thống. Hãy tải lên file .zip để bắt đầu.
+            </div>
+          ) : (
+            <div className="border border-border/50 rounded-md bg-surface-2/20 divide-y divide-border/40 text-xs">
+              {/* Header hàng */}
+              <div className="flex items-center justify-between p-2.5 bg-surface-2/50 text-[10px] font-bold uppercase tracking-wider text-gray-400">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="w-16 text-center">Mặc định</span>
+                  <span>Tên Extension</span>
+                </div>
+                <div className="pr-4">Phiên bản</div>
+                <div className="pr-4">Hành động</div>
+              </div>
+
+              {extensions.map((ext: Extension) => {
+                const isDefault = defaultExtIds.includes(ext.id);
+                return (
+                  <div key={ext.id} className="flex items-center justify-between p-3 hover:bg-surface-3/15 transition-colors">
+                    <div className="flex items-center gap-2 min-w-0">
+                      {/* Checkbox default */}
+                      <div className="w-16 flex items-center justify-center">
+                        <input
+                          type="checkbox"
+                          checked={isDefault}
+                          onChange={() => handleToggleDefaultExt(ext.id)}
+                          className="h-3.5 w-3.5 rounded border-border bg-surface-2 text-violet-600 focus:ring-violet-500/40"
+                          title="Đặt làm extension mặc định cho profile mới"
+                        />
+                      </div>
+
+                      {/* Icon & Name */}
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <Puzzle className="h-4 w-4 text-gray-400 shrink-0" />
+                        <span className="font-medium text-white truncate" title={ext.name}>
+                          {ext.name}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="text-gray-400 font-mono text-[10px] pr-4">
+                      v{ext.version || "1.0"}
+                    </div>
+
+                    <div className="pr-4">
+                      <button
+                        onClick={() => handleDeleteExt(ext.id)}
+                        className="p-1 hover:bg-rose-950/20 text-gray-500 hover:text-rose-400 rounded transition-all"
+                        title="Xóa vĩnh viễn khỏi hệ thống"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          <p className="text-[10px] text-gray-500 leading-relaxed bg-surface-1/40 p-2.5 rounded border border-border/30">
+            * <strong>Extension mặc định:</strong> Các tiện ích được tick chọn ở cột trên sẽ tự động được gán và bật mặc định mỗi khi bạn tạo một profile trình duyệt mới.<br />
+            * <strong>Tải lên extension:</strong> Bạn có thể giải nén tiện ích từ Chrome Web Store (dùng công cụ download CRX/ZIP) rồi nén lại thành định dạng .zip thông thường để tải lên đây.
+          </p>
         </div>
 
-        {/* Save Button */}
-        <div className="border-t border-border/60 pt-6">
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="px-8 py-2.5 bg-primary hover:bg-primaryScale-600 active:bg-primaryScale-700 text-white rounded text-sm font-semibold transition-all shadow-lg hover:shadow-primary/20 disabled:opacity-50 flex items-center gap-2"
-          >
-            <Save className="h-4 w-4" />
-            <span>{saving ? "Đang lưu..." : "Lưu"}</span>
-          </button>
-        </div>
+
       </div>
     </div>
   );

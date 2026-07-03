@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { X } from "lucide-react";
+import { X, Save, Loader2 } from "lucide-react";
 import type { BulkCreateData } from "../lib/api";
 
 const RESOLUTION_PRESETS: Record<string, { width: number; height: number }> = {
@@ -45,7 +45,6 @@ export function BulkCreateDialog({ onSave, onCancel }: BulkCreateDialogProps) {
     setSaving(true);
     setError(null);
 
-    // Phân tích danh sách proxy (mỗi dòng 1 proxy)
     const proxies = proxiesText
       .split("\n")
       .map((line) => line.trim())
@@ -53,7 +52,7 @@ export function BulkCreateDialog({ onSave, onCancel }: BulkCreateDialogProps) {
 
     const payload: BulkCreateData = {
       count,
-      name_pattern: namePattern,
+      name_pattern: namePattern.trim(),
       proxies: proxies.length > 0 ? proxies : undefined,
       platform,
       screen_width: width,
@@ -76,11 +75,25 @@ export function BulkCreateDialog({ onSave, onCancel }: BulkCreateDialogProps) {
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 animate-fade-in">
-      <div className="bg-surface-1 border border-border rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+      <form onSubmit={handleSubmit} className="bg-surface-1 border border-border rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border relative">
           <h2 className="text-base font-semibold text-white">Tạo Profile Hàng Loạt</h2>
-          <button onClick={onCancel} className="text-gray-400 hover:text-white transition-colors">
+          <div className="flex items-center gap-2 mr-8">
+            <button
+              type="submit"
+              disabled={saving}
+              className="px-4 py-1.5 rounded bg-accent hover:bg-accent/90 text-white font-medium transition-colors text-xs flex items-center gap-1.5 shadow-md shadow-violet-950/20 disabled:opacity-50"
+            >
+              {saving ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Save className="h-3.5 w-3.5" />
+              )}
+              <span>Tạo hàng loạt</span>
+            </button>
+          </div>
+          <button type="button" onClick={onCancel} className="absolute top-4 right-4 text-gray-400 hover:text-white p-1 rounded hover:bg-surface-3 transition-colors z-20" title="Đóng không lưu">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -92,8 +105,8 @@ export function BulkCreateDialog({ onSave, onCancel }: BulkCreateDialogProps) {
           </div>
         )}
 
-        {/* Scrollable Form */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4 text-xs text-gray-300">
+        {/* Scrollable Form Body */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-4 text-xs text-gray-300">
           <div className="grid grid-cols-2 gap-4">
             {/* Tên mẫu */}
             <div>
@@ -116,41 +129,23 @@ export function BulkCreateDialog({ onSave, onCancel }: BulkCreateDialogProps) {
               <label className="block text-gray-400 mb-1.5 font-medium">Số lượng cần tạo</label>
               <input
                 type="number"
-                min="1"
-                max="100"
                 value={count}
                 onChange={(e) => setCount(parseInt(e.target.value) || 0)}
                 className="input w-full bg-surface-2 border border-border rounded px-3 py-2 text-white"
+                min="1"
                 required
               />
             </div>
           </div>
 
-          {/* Danh sách Proxy */}
-          <div>
-            <label className="block text-gray-400 mb-1.5 font-medium flex items-center gap-1">
-              <span>Danh sách Proxy</span>
-              <span className="text-[10px] text-gray-500 font-normal">(Mỗi dòng một proxy - Tùy chọn)</span>
-            </label>
-            <textarea
-              value={proxiesText}
-              onChange={(e) => setProxiesText(e.target.value)}
-              className="textarea w-full h-24 bg-surface-2 border border-border rounded px-3 py-2 text-white font-mono"
-              placeholder="Định dạng: host:port hoặc host:port:user:pass hoặc http://user:pass@host:port"
-            />
-            <span className="text-[10px] text-gray-500 block mt-1">
-              Hệ thống sẽ gán xoay vòng lần lượt các proxy này cho các profile được tạo.
-            </span>
-          </div>
-
           <div className="grid grid-cols-2 gap-4 border-t border-border pt-4">
-            {/* Hệ điều hành */}
+            {/* Platform */}
             <div>
               <label className="block text-gray-400 mb-1.5 font-medium">Hệ điều hành giả lập</label>
               <select
                 value={platform}
                 onChange={(e) => setPlatform(e.target.value as any)}
-                className="input w-full bg-surface-2 border border-border rounded px-3 py-2 text-white"
+                className="select w-full bg-surface-2 border border-border rounded px-3 py-2 text-white"
               >
                 <option value="windows">Windows</option>
                 <option value="macos">macOS</option>
@@ -160,53 +155,47 @@ export function BulkCreateDialog({ onSave, onCancel }: BulkCreateDialogProps) {
 
             {/* Độ phân giải */}
             <div>
-              <label className="block text-gray-400 mb-1.5 font-medium">Độ phân giải màn hình</label>
+              <label className="block text-gray-400 mb-1.5 font-medium">Màn hình (Resolution)</label>
               <select
                 value={currentResolution}
                 onChange={(e) => {
                   const val = e.target.value;
                   setCurrentResolution(val);
-                  const preset = RESOLUTION_PRESETS[val];
-                  if (preset) {
-                    setWidth(preset.width);
-                    setHeight(preset.height);
+                  if (RESOLUTION_PRESETS[val]) {
+                    setWidth(RESOLUTION_PRESETS[val]!.width);
+                    setHeight(RESOLUTION_PRESETS[val]!.height);
                   }
                 }}
-                className="input w-full bg-surface-2 border border-border rounded px-3 py-2 text-white text-xs"
+                className="select w-full bg-surface-2 border border-border rounded px-3 py-2 text-white"
               >
-                {Object.keys(RESOLUTION_PRESETS).map((name) => (
-                  <option key={name} value={name}>{name}</option>
+                {Object.keys(RESOLUTION_PRESETS).map((p) => (
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
                 ))}
-                <option value="custom">Tự cấu hình (Custom)</option>
               </select>
             </div>
           </div>
 
-          {currentResolution === "custom" && (
-            <div className="grid grid-cols-2 gap-4 border-t border-border/40 pt-4">
-              <div>
-                <label className="block text-gray-400 mb-1.5 font-medium">Chiều rộng (Width)</label>
-                <input
-                  type="number"
-                  value={width}
-                  onChange={(e) => setWidth(parseInt(e.target.value) || 1920)}
-                  className="input w-full bg-surface-2 border border-border rounded px-3 py-2 text-white text-xs"
-                />
-              </div>
-              <div>
-                <label className="block text-gray-400 mb-1.5 font-medium">Chiều cao (Height)</label>
-                <input
-                  type="number"
-                  value={height}
-                  onChange={(e) => setHeight(parseInt(e.target.value) || 1080)}
-                  className="input w-full bg-surface-2 border border-border rounded px-3 py-2 text-white text-xs"
-                />
-              </div>
-            </div>
-          )}
+          {/* Proxy */}
+          <div className="border-t border-border pt-4">
+            <label className="block text-gray-400 mb-1.5 font-medium flex items-center justify-between">
+              <span>Danh sách Proxy gán xoay vòng (Không bắt buộc)</span>
+              <span className="text-[10px] text-gray-500 font-normal">(Mỗi dòng một proxy)</span>
+            </label>
+            <textarea
+              value={proxiesText}
+              onChange={(e) => setProxiesText(e.target.value)}
+              className="textarea w-full h-24 bg-surface-2 border border-border rounded px-3 py-2 text-white font-mono"
+              placeholder="Định dạng: host:port hoặc host:port:user:pass"
+            />
+            <span className="text-[10px] text-gray-500 mt-1 block">
+              Hệ thống sẽ tự động gán proxy xoay vòng lần lượt từ trên xuống dưới cho các profile được tạo.
+            </span>
+          </div>
 
-          {/* Checkboxes */}
-          <div className="grid grid-cols-3 gap-4 border-t border-border pt-4">
+          {/* Cấu hình nâng cao */}
+          <div className="border-t border-border pt-4 grid grid-cols-3 gap-4">
             <label className="flex items-start gap-2.5 cursor-pointer">
               <input
                 type="checkbox"
@@ -216,7 +205,7 @@ export function BulkCreateDialog({ onSave, onCancel }: BulkCreateDialogProps) {
               />
               <div>
                 <span className="font-medium text-white block">Humanize</span>
-                <span className="text-[10px] text-gray-500">Mô phỏng hành vi di chuột, cuộn như người thật.</span>
+                <span className="text-[10px] text-gray-500">Giả lập hành vi cuộn chuột và gõ phím giống con người.</span>
               </div>
             </label>
 
@@ -229,7 +218,7 @@ export function BulkCreateDialog({ onSave, onCancel }: BulkCreateDialogProps) {
               />
               <div>
                 <span className="font-medium text-white block">Headless</span>
-                <span className="text-[10px] text-gray-500">Chạy ngầm ẩn trình duyệt (không khuyến khích antidetect).</span>
+                <span className="text-[10px] text-gray-500">Chạy ngầm ẩn trình duyệt.</span>
               </div>
             </label>
 
@@ -242,7 +231,7 @@ export function BulkCreateDialog({ onSave, onCancel }: BulkCreateDialogProps) {
               />
               <div>
                 <span className="font-medium text-white block">GeoIP</span>
-                <span className="text-[10px] text-gray-500">Tự động cấu hình múi giờ và ngôn ngữ theo IP Proxy.</span>
+                <span className="text-[10px] text-gray-500">Cấu hình múi giờ và ngôn ngữ theo IP Proxy.</span>
               </div>
             </label>
           </div>
@@ -257,27 +246,8 @@ export function BulkCreateDialog({ onSave, onCancel }: BulkCreateDialogProps) {
               placeholder="Nhập ghi chú chung áp dụng cho tất cả các profile..."
             />
           </div>
-
-          {/* Footer Actions */}
-          <div className="flex justify-end gap-2 border-t border-border pt-4 mt-6">
-            <button
-              type="button"
-              onClick={onCancel}
-              className="btn bg-surface-3 hover:bg-surface-4 text-gray-200 border border-border px-4 py-2 rounded transition-colors"
-              disabled={saving}
-            >
-              Hủy bỏ
-            </button>
-            <button
-              type="submit"
-              className="btn bg-accent hover:bg-accent-hover text-white px-5 py-2 rounded transition-colors font-medium"
-              disabled={saving}
-            >
-              {saving ? "Đang tạo..." : "Tạo hàng loạt"}
-            </button>
-          </div>
-        </form>
-      </div>
+        </div>
+      </form>
     </div>
   );
 }
