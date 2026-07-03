@@ -29,7 +29,7 @@ def main():
         print("Lỗi khởi chạy profile:", launch_res.text)
         return
     
-    # 2. Lấy thông tin trạng thái profile (bao gồm CDP Port và VNC Port)
+    # 2. Lấy thông tin trạng thái profile (bao gồm CDP Port)
     status_res = requests.get(f"{MANAGER_URL}/api/profiles/{PROFILE_ID}/status")
     status_data = status_res.json()
     
@@ -68,7 +68,7 @@ def main():
         page.screenshot(path="rebrowser_test.png")
         print("Đã chụp ảnh màn hình lưu tại rebrowser_test.png")
         
-        # Đóng kết nối Playwright (trình duyệt vẫn chạy trên VNC)
+        # Đóng kết nối Playwright (trình duyệt vẫn tiếp tục chạy)
         browser.close()
 
 if __name__ == "__main__":

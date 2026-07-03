@@ -3,7 +3,6 @@ import { Lock, X, Monitor, Settings, Terminal, Info } from "lucide-react";
 import { useProfiles } from "./hooks/useProfiles";
 import { api, setOnUnauthorized, type ProfileCreateData } from "./lib/api";
 import { ProfileForm } from "./components/ProfileForm";
-import { ProfileViewer } from "./components/ProfileViewer";
 import { LoginPage } from "./components/LoginPage";
 import { ProfileTable } from "./components/ProfileTable";
 import { BulkCreateDialog } from "./components/BulkCreateDialog";
@@ -20,7 +19,7 @@ import { RecycleBinDialog } from "./components/RecycleBinDialog";
 import logoImg from "./logo.png";
 
 type AuthState = "checking" | "required" | "ok" | "error";
-type View = "empty" | "create" | "edit" | "view";
+type View = "empty" | "create" | "edit";
 type Tab = "profiles" | "settings" | "api" | "about";
 
 export default function App() {
@@ -217,9 +216,8 @@ function AppContent({ authRequired, onLogout }: AppContentProps) {
 
   const handleSelect = useCallback((id: string) => {
     setSelectedId(id);
-    const profile = profiles.find((p) => p.id === id);
-    setView(profile?.status === "running" ? "view" : "empty");
-  }, [profiles]);
+    setView("empty");
+  }, []);
 
   const handleEdit = useCallback((id: string) => {
     setSelectedId(id);
@@ -275,9 +273,6 @@ function AppContent({ authRequired, onLogout }: AppContentProps) {
     setView("empty");
   }, [selectedId, remove]);
 
-  const handleVncDisconnect = useCallback(() => {
-    setView("empty"); // Quay về danh sách chính
-  }, []);
 
   if (loading) {
     return (
@@ -384,42 +379,30 @@ function AppContent({ authRequired, onLogout }: AppContentProps) {
 
             {/* Content */}
             <div className="flex-1 overflow-y-auto overscroll-contain relative">
-              {view !== "view" ? (
-                <ProfileTable
-                  profiles={profiles}
-                  onSelect={handleSelect}
-                  onEdit={handleEdit}
-                  onLaunch={handleTableLaunch}
-                  onStop={stop}
-                  onDelete={remove}
-                  onClone={handleClone}
-                  onBulkLaunch={bulkLaunch}
-                  onBulkStop={bulkStop}
-                  onBulkDelete={bulkDelete}
-                  onNew={handleNew}
-                  onBulkNew={() => setActiveBulkModal("create")}
-                  onBulkStartupUrl={triggerBulkStartupUrl}
-                  onBulkResetProxy={triggerBulkResetProxy}
-                  onBulkCacheClear={triggerBulkCacheClear}
-                  onBulkGroup={triggerBulkGroup}
-                  onBulkBookmark={triggerBulkBookmark}
-                  onGridLayout={handleGridLayout}
-                  onBulkImport={() => setActiveBulkModal("import")}
-                  showFeedback={showFeedback}
-                  useTrash={useTrash}
-                  onOpenRecycleBin={() => setRecycleBinOpen(true)}
-                />
-              ) : (
-                selected && selected.status === "running" && (
-                  <ProfileViewer
-                    key={selected.id}
-                    profileId={selected.id}
-                    cdpUrl={selected.cdp_url}
-                    clipboardSync={selected.clipboard_sync}
-                    onDisconnect={handleVncDisconnect}
-                  />
-                )
-              )}
+              <ProfileTable
+                profiles={profiles}
+                onSelect={handleSelect}
+                onEdit={handleEdit}
+                onLaunch={handleTableLaunch}
+                onStop={stop}
+                onDelete={remove}
+                onClone={handleClone}
+                onBulkLaunch={bulkLaunch}
+                onBulkStop={bulkStop}
+                onBulkDelete={bulkDelete}
+                onNew={handleNew}
+                onBulkNew={() => setActiveBulkModal("create")}
+                onBulkStartupUrl={triggerBulkStartupUrl}
+                onBulkResetProxy={triggerBulkResetProxy}
+                onBulkCacheClear={triggerBulkCacheClear}
+                onBulkGroup={triggerBulkGroup}
+                onBulkBookmark={triggerBulkBookmark}
+                onGridLayout={handleGridLayout}
+                onBulkImport={() => setActiveBulkModal("import")}
+                showFeedback={showFeedback}
+                useTrash={useTrash}
+                onOpenRecycleBin={() => setRecycleBinOpen(true)}
+              />
 
               {/* Modal overlay cho Tạo và Sửa profile đơn lẻ */}
               {(view === "create" || (view === "edit" && selected)) && (

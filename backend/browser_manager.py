@@ -14,7 +14,6 @@ from typing import Any
 
 from cloakbrowser import launch_persistent_context_async
 
-from .vnc_manager import VNCManager
 
 import shutil
 import stat
@@ -220,8 +219,6 @@ CDP_PORT_RANGE = 100  # cycle through 5100-5199 to avoid TIME_WAIT collisions
 class RunningProfile:
     profile_id: str
     context: Any  # Playwright BrowserContext
-    display: int
-    ws_port: int
     cdp_port: int
 
 
@@ -229,7 +226,6 @@ class BrowserManager:
     def __init__(self):
         self.running: dict[str, RunningProfile] = {}
         self._launching: set[str] = set()  # profile IDs currently being launched
-        self.vnc = VNCManager()
         self._lock = asyncio.Lock()
         self._next_cdp_port = BASE_CDP_PORT
         self._auto_launch_task: asyncio.Task | None = None
@@ -243,8 +239,6 @@ class BrowserManager:
                 raise RuntimeError(f"Profile {profile_id} is already running")
             self._launching.add(profile_id)
 
-        display = 0
-        ws_port = 0
 
         try:
             cdp_port = self._allocate_cdp_port()
@@ -346,12 +340,10 @@ class BrowserManager:
             running = RunningProfile(
                 profile_id=profile_id,
                 context=context,
-                display=0,
-                ws_port=0,
                 cdp_port=cdp_port,
             )
 
-            # Auto-cleanup if browser crashes or user closes Chrome via VNC
+            # Auto-cleanup if browser crashes or user closes Chrome
             context.on("close", lambda: asyncio.ensure_future(
                 self._on_browser_closed(profile_id)
             ))
@@ -361,8 +353,8 @@ class BrowserManager:
                 self._launching.discard(profile_id)
 
             logger.info(
-                "Launched profile %s on display :%d (ws_port=%d, cdp_port=%d)",
-                profile_id, display, ws_port, cdp_port,
+                "Launched profile %s (cdp_port=%d)",
+                profile_id, cdp_port,
             )
 
             return running
@@ -423,8 +415,8 @@ class BrowserManager:
         if running:
             return {
                 "status": "running",
-                "vnc_ws_port": running.ws_port,
-                "display": f":{running.display}",
+                "vnc_ws_port": None,
+                "display": None,
                 "cdp_url": f"/api/profiles/{profile_id}/cdp",
             }
         return {"status": "stopped", "vnc_ws_port": None, "display": None, "cdp_url": None}
@@ -437,11 +429,9 @@ class BrowserManager:
         for pid in profile_ids:
             await self.stop(pid)
 
-
-
     async def cleanup_stale(self):
-        """Kill orphan processes from previous container runs."""
-        await self.vnc.cleanup_stale()
+        """Kill orphan processes from previous runs."""
+        pass
 
     async def auto_launch_all(self):
         """Launch all profiles with auto_launch=True. Called on startup."""

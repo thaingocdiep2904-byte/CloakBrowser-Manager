@@ -593,8 +593,8 @@ async def launch_profile(profile_id: str):
     return LaunchResponse(
         profile_id=profile_id,
         status="running",
-        vnc_ws_port=running.ws_port,
-        display=f":{running.display}",
+        vnc_ws_port=None,
+        display=None,
         cdp_url=f"/api/profiles/{profile_id}/cdp",
     )
 

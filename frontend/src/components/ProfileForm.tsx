@@ -108,7 +108,6 @@ export function ProfileForm({ profile, onSave, onDelete }: ProfileFormProps) {
     human_preset: "default",
     headless: false,
     geoip: true,
-    clipboard_sync: true,
     auto_launch: false,
     launch_args: [],
     tags: [],
@@ -158,7 +157,6 @@ export function ProfileForm({ profile, onSave, onDelete }: ProfileFormProps) {
         human_preset: profile.human_preset as any,
         headless: profile.headless,
         geoip: profile.geoip,
-        clipboard_sync: profile.clipboard_sync,
         auto_launch: profile.auto_launch,
         color_scheme: profile.color_scheme as any,
         launch_args: cleanArgs,
@@ -198,7 +196,6 @@ export function ProfileForm({ profile, onSave, onDelete }: ProfileFormProps) {
         human_preset: "default",
         headless: false,
         geoip: true,
-        clipboard_sync: true,
         auto_launch: false,
         launch_args: [],
         tags: [],
@@ -571,20 +568,11 @@ export function ProfileForm({ profile, onSave, onDelete }: ProfileFormProps) {
                 <label className="flex items-center gap-2 text-gray-300 cursor-pointer select-none">
                   <input
                     type="checkbox"
-                    checked={form.clipboard_sync ?? true}
-                    onChange={(e) => set("clipboard_sync", e.target.checked)}
-                    className="rounded border-border bg-surface-2 h-4 w-4 text-accent focus:ring-0"
-                  />
-                  <span>Đồng bộ khay nhớ tạm (Clipboard sync) mặc định trong cửa sổ VNC</span>
-                </label>
-                <label className="flex items-center gap-2 text-gray-300 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
                     checked={form.auto_launch ?? false}
                     onChange={(e) => set("auto_launch", e.target.checked)}
                     className="rounded border-border bg-surface-2 h-4 w-4 text-accent focus:ring-0"
                   />
-                  <span>Tự động khởi chạy profile khi Container/App được bật</span>
+                  <span>Tự động khởi chạy profile khi Phần mềm được bật</span>
                 </label>
               </div>
 

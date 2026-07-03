@@ -44,9 +44,9 @@ export function AboutTab() {
 
           <div className="bg-surface-1 border border-border p-5 rounded-lg space-y-2 hover:border-primary/30 transition-all">
             <CheckCircle className="h-5 w-5 text-green-400" />
-            <h3 className="text-sm font-semibold text-white">Điều khiển qua VNC & CDP</h3>
+            <h3 className="text-sm font-semibold text-white">Chạy trực tiếp & CDP</h3>
             <p className="text-xs text-gray-400 leading-relaxed">
-              Tích hợp VNC Viewer trực quan hiển thị trực tiếp giao diện trình duyệt và mở cổng CDP để tự động hóa bằng script Playwright/Puppeteer.
+              Trình duyệt khởi chạy trực tiếp trên máy thật với tốc độ cao nhất, đồng thời mở cổng CDP để tự động hóa bằng script Playwright/Puppeteer.
             </p>
           </div>
         </div>
