@@ -123,7 +123,6 @@ export function ProfileForm({ profile, onSave, onDelete }: ProfileFormProps) {
     device_memory: 4,
     mac_address: "",
     browser_brand: "",
-    storage_quota: null,
   });
 
   const [saving, setSaving] = useState(false);
@@ -174,7 +173,6 @@ export function ProfileForm({ profile, onSave, onDelete }: ProfileFormProps) {
         device_memory: profile.device_memory ?? 4,
         mac_address: profile.mac_address ?? generateRandomMac(),
         browser_brand: profile.browser_brand ?? "",
-        storage_quota: profile.storage_quota ?? null,
       });
     } else {
       setStartupUrl("");
@@ -215,7 +213,6 @@ export function ProfileForm({ profile, onSave, onDelete }: ProfileFormProps) {
         gpu_renderer: preset?.renderer || "ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 (0x00002484) Direct3D11 vs_5_0 ps_5_0, D3D11)",
         mac_address: generateRandomMac(),
         browser_brand: "",
-        storage_quota: null,
       });
     }
   }, [profile?.id]);
@@ -896,20 +893,7 @@ export function ProfileForm({ profile, onSave, onDelete }: ProfileFormProps) {
                     <option value="32">32 GB</option>
                   </select>
                 </div>
-                <div>
-                  <label className="block text-gray-400 mb-1 font-medium">Storage Quota (MB)</label>
-                  <select
-                    className="input w-full bg-surface-2 border border-border rounded px-2.5 py-1.5 text-white text-xs"
-                    value={(form as any).storage_quota ?? ""}
-                    onChange={(e) => set("storage_quota" as any, e.target.value ? Number(e.target.value) : null)}
-                  >
-                    <option value="">Mặc định (Auto)</option>
-                    <option value="1000">1,000 MB (~1 GB)</option>
-                    <option value="5000">5,000 MB (~5 GB) — Bypass Incognito</option>
-                    <option value="10000">10,000 MB (~10 GB)</option>
-                    <option value="50000">50,000 MB (~50 GB)</option>
-                  </select>
-                </div>
+
                 <div>
                   <label className="block text-gray-400 mb-1 font-medium">MAC Address</label>
                   <div className="flex gap-1.5">
@@ -1021,14 +1005,10 @@ export function ProfileForm({ profile, onSave, onDelete }: ProfileFormProps) {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 pt-1.5 border-t border-border/30">
+            <div className="pt-1.5 border-t border-border/30">
               <div>
                 <span className="text-[10px] text-gray-500 font-medium block">Browser Brand</span>
                 <span className="text-white font-medium">{(form as any).browser_brand || "Chrome"}</span>
-              </div>
-              <div>
-                <span className="text-[10px] text-gray-500 font-medium block">Storage Quota</span>
-                <span className="text-white font-mono">{(form as any).storage_quota ? `${(form as any).storage_quota} MB` : "Tự động"}</span>
               </div>
             </div>
 

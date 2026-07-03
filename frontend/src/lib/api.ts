@@ -46,7 +46,6 @@ export interface Profile {
   device_memory?: number;
   mac_address?: string;
   browser_brand?: string | null;
-  storage_quota?: number | null;
 }
 
 export interface ProfileCreateData {
@@ -84,7 +83,6 @@ export interface ProfileCreateData {
   device_memory?: number;
   mac_address?: string;
   browser_brand?: string | null;
-  storage_quota?: number | null;
 }
 
 export interface LaunchResult {

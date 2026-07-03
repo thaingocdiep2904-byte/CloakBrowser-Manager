@@ -10,7 +10,6 @@ import asyncio
 import hmac
 import logging
 import os
-import struct
 import shutil
 from contextlib import asynccontextmanager
 from http.cookies import SimpleCookie
@@ -27,7 +26,6 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 from . import database as db
 from .browser_manager import BrowserManager
 from .models import (
-    ClipboardRequest,
     LaunchResponse,
     LoginRequest,
     ProfileCreate,

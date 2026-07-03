@@ -42,7 +42,6 @@ class ProfileCreate(BaseModel):
     device_memory: int | None = 4
     mac_address: str | None = None
     browser_brand: str | None = None
-    storage_quota: int | None = None
 
 
 class ProfileUpdate(BaseModel):
@@ -80,7 +79,6 @@ class ProfileUpdate(BaseModel):
     device_memory: int | None = None
     mac_address: str | None = None
     browser_brand: str | None = Field(default=None)
-    storage_quota: int | None = Field(default=None)
 
 
 class TagCreate(BaseModel):
@@ -125,7 +123,6 @@ class ProfileResponse(BaseModel):
     device_memory: int | None = 4
     mac_address: str | None = None
     browser_brand: str | None = None
-    storage_quota: int | None = None
 
     @field_validator("clipboard_sync", mode="before")
     @classmethod
@@ -167,9 +164,6 @@ class ProfileStatusResponse(BaseModel):
     display: str | None = None
     cdp_url: str | None = None
 
-
-class ClipboardRequest(BaseModel):
-    text: str = Field(max_length=1_048_576)  # 1MB max
 
 
 class LoginRequest(BaseModel):

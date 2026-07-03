@@ -78,7 +78,6 @@ def init_db():
                 device_memory INTEGER DEFAULT 4,
                 mac_address TEXT,
                 browser_brand TEXT,
-                storage_quota INTEGER,
                 is_deleted BOOLEAN DEFAULT 0
             );
 
@@ -155,8 +154,6 @@ def init_db():
             conn.execute("ALTER TABLE profiles ADD COLUMN mac_address TEXT")
         if "browser_brand" not in cols:
             conn.execute("ALTER TABLE profiles ADD COLUMN browser_brand TEXT")
-        if "storage_quota" not in cols:
-            conn.execute("ALTER TABLE profiles ADD COLUMN storage_quota INTEGER")
         conn.commit()
 
 
@@ -186,8 +183,8 @@ def create_profile(
                 canvas_noise, client_rect_noise, webgl_noise, audio_noise,
                 webgl_meta_masked, media_devices_masked, media_audio_inputs,
                 media_audio_outputs, media_video_inputs, device_memory, mac_address,
-                browser_brand, storage_quota
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                browser_brand
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 profile_id, name, seed,
                 fields.get("proxy"),
@@ -222,7 +219,6 @@ def create_profile(
                 fields.get("device_memory", 4),
                 fields.get("mac_address"),
                 fields.get("browser_brand"),
-                fields.get("storage_quota"),
             ),
         )
         for t in tags:
@@ -329,7 +325,7 @@ def update_profile(profile_id: str, **fields: Any) -> dict[str, Any] | None:
             "canvas_noise", "client_rect_noise", "webgl_noise", "audio_noise",
             "webgl_meta_masked", "media_devices_masked", "media_audio_inputs",
             "media_audio_outputs", "media_video_inputs", "device_memory", "mac_address",
-            "browser_brand", "storage_quota",
+            "browser_brand",
         ):
             if col in fields:
                 update_cols.append(f"{col} = ?")
