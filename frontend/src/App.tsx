@@ -129,14 +129,9 @@ function AppContent({ authRequired, onLogout }: AppContentProps) {
     // Chạy trực tiếp trên desktop thật, không chuyển sang view VNC nữa
     setView("empty");
   }, [launch, osName]);
-  const [bulkCreateOpen, setBulkCreateOpen] = useState(false);
-  const [bulkStartupUrlOpen, setBulkStartupUrlOpen] = useState(false);
-  const [bulkResetProxyOpen, setBulkResetProxyOpen] = useState(false);
-  const [bulkCacheClearOpen, setBulkCacheClearOpen] = useState(false);
-  const [bulkGroupOpen, setBulkGroupOpen] = useState(false);
-  const [bulkBookmarkOpen, setBulkBookmarkOpen] = useState(false);
+  type ActiveBulkModal = "create" | "startup_url" | "reset_proxy" | "cache_clear" | "group" | "bookmark" | "import" | null;
+  const [activeBulkModal, setActiveBulkModal] = useState<ActiveBulkModal>(null);
   const [bulkTargetIds, setBulkTargetIds] = useState<string[]>([]);
-  const [bulkImportOpen, setBulkImportOpen] = useState(false);
 
   const handleBulkStartupUrl = useCallback(async (ids: string[], url: string) => {
     await api.bulkSetStartupUrl(ids, url);
@@ -189,27 +184,27 @@ function AppContent({ authRequired, onLogout }: AppContentProps) {
 
   const triggerBulkStartupUrl = useCallback((ids: string[]) => {
     setBulkTargetIds(ids);
-    setBulkStartupUrlOpen(true);
+    setActiveBulkModal("startup_url");
   }, []);
 
   const triggerBulkResetProxy = useCallback((ids: string[]) => {
     setBulkTargetIds(ids);
-    setBulkResetProxyOpen(true);
+    setActiveBulkModal("reset_proxy");
   }, []);
 
   const triggerBulkCacheClear = useCallback((ids: string[]) => {
     setBulkTargetIds(ids);
-    setBulkCacheClearOpen(true);
+    setActiveBulkModal("cache_clear");
   }, []);
 
   const triggerBulkGroup = useCallback((ids: string[]) => {
     setBulkTargetIds(ids);
-    setBulkGroupOpen(true);
+    setActiveBulkModal("group");
   }, []);
 
   const triggerBulkBookmark = useCallback((ids: string[]) => {
     setBulkTargetIds(ids);
-    setBulkBookmarkOpen(true);
+    setActiveBulkModal("bookmark");
   }, []);
 
   useEffect(() => {
@@ -269,7 +264,7 @@ function AppContent({ authRequired, onLogout }: AppContentProps) {
 
   const handleBulkCreate = useCallback(async (data: any) => {
     await bulkCreate(data);
-    setBulkCreateOpen(false);
+    setActiveBulkModal(null);
     showFeedback(`Đã tạo thành công ${data.count || 1} profiles!`);
   }, [bulkCreate, showFeedback]);
 
@@ -402,14 +397,14 @@ function AppContent({ authRequired, onLogout }: AppContentProps) {
                   onBulkStop={bulkStop}
                   onBulkDelete={bulkDelete}
                   onNew={handleNew}
-                  onBulkNew={() => setBulkCreateOpen(true)}
+                  onBulkNew={() => setActiveBulkModal("create")}
                   onBulkStartupUrl={triggerBulkStartupUrl}
                   onBulkResetProxy={triggerBulkResetProxy}
                   onBulkCacheClear={triggerBulkCacheClear}
                   onBulkGroup={triggerBulkGroup}
                   onBulkBookmark={triggerBulkBookmark}
                   onGridLayout={handleGridLayout}
-                  onBulkImport={() => setBulkImportOpen(true)}
+                  onBulkImport={() => setActiveBulkModal("import")}
                   showFeedback={showFeedback}
                   useTrash={useTrash}
                   onOpenRecycleBin={() => setRecycleBinOpen(true)}
@@ -460,57 +455,57 @@ function AppContent({ authRequired, onLogout }: AppContentProps) {
         <AboutTab />
       )}
 
-      {bulkCreateOpen && (
+      {activeBulkModal === "create" && (
         <BulkCreateDialog
           onSave={handleBulkCreate}
-          onCancel={() => setBulkCreateOpen(false)}
+          onCancel={() => setActiveBulkModal(null)}
         />
       )}
 
-      {bulkStartupUrlOpen && (
+      {activeBulkModal === "startup_url" && (
         <BulkStartupUrlDialog
           profileIds={bulkTargetIds}
           onSave={handleBulkStartupUrl}
-          onCancel={() => setBulkStartupUrlOpen(false)}
+          onCancel={() => setActiveBulkModal(null)}
         />
       )}
 
-      {bulkResetProxyOpen && (
+      {activeBulkModal === "reset_proxy" && (
         <BulkResetProxyDialog
           profileIds={bulkTargetIds}
           onSave={handleBulkResetProxy}
-          onCancel={() => setBulkResetProxyOpen(false)}
+          onCancel={() => setActiveBulkModal(null)}
         />
       )}
 
-      {bulkCacheClearOpen && (
+      {activeBulkModal === "cache_clear" && (
         <BulkCacheClearDialog
           profileIds={bulkTargetIds}
           onSave={handleBulkCacheClear}
-          onCancel={() => setBulkCacheClearOpen(false)}
+          onCancel={() => setActiveBulkModal(null)}
         />
       )}
 
-      {bulkGroupOpen && (
+      {activeBulkModal === "group" && (
         <BulkGroupDialog
           profileIds={bulkTargetIds}
           onSave={handleBulkGroup}
-          onCancel={() => setBulkGroupOpen(false)}
+          onCancel={() => setActiveBulkModal(null)}
         />
       )}
 
-      {bulkBookmarkOpen && (
+      {activeBulkModal === "bookmark" && (
         <BulkBookmarkDialog
           profileIds={bulkTargetIds}
           onSave={handleBulkBookmark}
-          onCancel={() => setBulkBookmarkOpen(false)}
+          onCancel={() => setActiveBulkModal(null)}
         />
       )}
 
-      {bulkImportOpen && (
+      {activeBulkModal === "import" && (
         <BulkImportDialog
           onImport={handleBulkImport}
-          onCancel={() => setBulkImportOpen(false)}
+          onCancel={() => setActiveBulkModal(null)}
         />
       )}
 

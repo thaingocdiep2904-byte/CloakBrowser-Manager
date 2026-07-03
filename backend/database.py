@@ -17,6 +17,12 @@ DATA_DIR = Path(os.environ.get("DATA_DIR", str(Path(__file__).parent.parent / "d
 DB_PATH = DATA_DIR / "profiles.db"
 
 
+def to_bool(val: Any) -> bool:
+    if not val:
+        return False
+    return str(val).lower() in ("true", "1", "yes", "on")
+
+
 @contextmanager
 def get_db():
     conn = sqlite3.connect(str(DB_PATH))
@@ -32,6 +38,8 @@ def get_db():
 def init_db():
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     with get_db() as conn:
+        conn.execute("PRAGMA journal_mode=WAL;")
+        conn.execute("PRAGMA synchronous=NORMAL;")
         conn.executescript("""
             CREATE TABLE IF NOT EXISTS profiles (
                 id TEXT PRIMARY KEY,
@@ -227,19 +235,23 @@ def create_profile(
     return get_profile(profile_id)  # type: ignore[return-value]
 
 
+def _get_profile_by_conn(conn, profile_id: str) -> dict[str, Any] | None:
+    row = conn.execute("SELECT * FROM profiles WHERE id = ?", (profile_id,)).fetchone()
+    if not row:
+        return None
+    profile = dict(row)
+    profile["launch_args"] = json.loads(profile.get("launch_args") or "[]")
+    tags = conn.execute(
+        "SELECT tag, color FROM profile_tags WHERE profile_id = ?",
+        (profile_id,),
+    ).fetchall()
+    profile["tags"] = [dict(t) for t in tags]
+    return profile
+
+
 def get_profile(profile_id: str) -> dict[str, Any] | None:
     with get_db() as conn:
-        row = conn.execute("SELECT * FROM profiles WHERE id = ?", (profile_id,)).fetchone()
-        if not row:
-            return None
-        profile = dict(row)
-        profile["launch_args"] = json.loads(profile.get("launch_args") or "[]")
-        tags = conn.execute(
-            "SELECT tag, color FROM profile_tags WHERE profile_id = ?",
-            (profile_id,),
-        ).fetchall()
-        profile["tags"] = [dict(t) for t in tags]
-        return profile
+        return _get_profile_by_conn(conn, profile_id)
 
 
 def list_profiles() -> list[dict[str, Any]]:
@@ -295,55 +307,52 @@ def restore_profile(profile_id: str) -> bool:
 
 
 def update_profile(profile_id: str, **fields: Any) -> dict[str, Any] | None:
-    existing = get_profile(profile_id)
-    if not existing:
-        return None
+    with get_db() as conn:
+        existing = _get_profile_by_conn(conn, profile_id)
+        if not existing:
+            return None
 
-    tags = fields.pop("tags", None)
+        tags = fields.pop("tags", None)
 
-    # Only update fields that were explicitly provided
-    update_cols = []
-    update_vals = []
-    # Pre-serialize launch_args to JSON before the generic update loop
-    if "launch_args" in fields:
-        fields["launch_args"] = json.dumps(fields["launch_args"] or [])
+        # Only update fields that were explicitly provided
+        update_cols = []
+        update_vals = []
+        # Pre-serialize launch_args to JSON before the generic update loop
+        if "launch_args" in fields:
+            fields["launch_args"] = json.dumps(fields["launch_args"] or [])
 
-    for col in (
-        "name", "fingerprint_seed", "proxy", "timezone", "locale", "platform",
-        "user_agent", "screen_width", "screen_height", "gpu_vendor", "gpu_renderer",
-        "hardware_concurrency", "humanize", "human_preset", "headless", "geoip",
-        "clipboard_sync", "auto_launch", "color_scheme", "launch_args", "notes", "last_run",
-        "canvas_noise", "client_rect_noise", "webgl_noise", "audio_noise",
-        "webgl_meta_masked", "media_devices_masked", "media_audio_inputs",
-        "media_audio_outputs", "media_video_inputs", "device_memory", "mac_address",
-        "browser_brand", "storage_quota",
-    ):
-        if col in fields:
-            update_cols.append(f"{col} = ?")
-            update_vals.append(fields[col])
+        for col in (
+            "name", "fingerprint_seed", "proxy", "timezone", "locale", "platform",
+            "user_agent", "screen_width", "screen_height", "gpu_vendor", "gpu_renderer",
+            "hardware_concurrency", "humanize", "human_preset", "headless", "geoip",
+            "clipboard_sync", "auto_launch", "color_scheme", "launch_args", "notes", "last_run",
+            "canvas_noise", "client_rect_noise", "webgl_noise", "audio_noise",
+            "webgl_meta_masked", "media_devices_masked", "media_audio_inputs",
+            "media_audio_outputs", "media_video_inputs", "device_memory", "mac_address",
+            "browser_brand", "storage_quota",
+        ):
+            if col in fields:
+                update_cols.append(f"{col} = ?")
+                update_vals.append(fields[col])
 
-    if update_cols:
-        update_cols.append("updated_at = ?")
-        update_vals.append(_now())
-        update_vals.append(profile_id)
-        with get_db() as conn:
+        if update_cols:
+            update_cols.append("updated_at = ?")
+            update_vals.append(_now())
+            update_vals.append(profile_id)
             conn.execute(
                 f"UPDATE profiles SET {', '.join(update_cols)} WHERE id = ?",
                 update_vals,
             )
-            conn.commit()
 
-    if tags is not None:
-        with get_db() as conn:
+        if tags is not None:
             conn.execute("DELETE FROM profile_tags WHERE profile_id = ?", (profile_id,))
             for t in tags:
                 conn.execute(
                     "INSERT INTO profile_tags (profile_id, tag, color) VALUES (?, ?, ?)",
                     (profile_id, t["tag"], t.get("color")),
                 )
-            conn.commit()
-
-    return get_profile(profile_id)
+        conn.commit()
+        return _get_profile_by_conn(conn, profile_id)
 
 
 def delete_profile(profile_id: str) -> bool:

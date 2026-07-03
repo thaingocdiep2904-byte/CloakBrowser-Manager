@@ -200,12 +200,7 @@ def _init_profile_defaults(user_data_dir: Path) -> None:
         # Configure reopen tabs (restore session)
         from . import database as db
         app_settings = db.get_all_settings()
-        def to_bool(val) -> bool:
-            if not val:
-                return False
-            return str(val).lower() in ("true", "1", "yes", "on")
-            
-        reopen_tabs = to_bool(app_settings.get("reopen_tabs"))
+        reopen_tabs = db.to_bool(app_settings.get("reopen_tabs"))
         if "session" not in data:
             data["session"] = {}
         data["session"]["restore_on_startup"] = 1 if reopen_tabs else 5
@@ -271,12 +266,7 @@ class BrowserManager:
             # Get settings for window resizing
             from . import database as db
             app_settings = db.get_all_settings()
-            def to_bool(val) -> bool:
-                if not val:
-                    return False
-                return str(val).lower() in ("true", "1", "yes", "on")
-                
-            auto_resize = to_bool(app_settings.get("auto_resize_window"))
+            auto_resize = db.to_bool(app_settings.get("auto_resize_window"))
             if auto_resize:
                 w = profile.get("screen_width", 1920)
                 h = profile.get("screen_height", 1080)
@@ -290,11 +280,7 @@ class BrowserManager:
             extra_args = self._build_fingerprint_args(profile)
             
             # Load reopen_tabs setting
-            def to_bool_local(val) -> bool:
-                if not val:
-                    return False
-                return str(val).lower() in ("true", "1", "yes", "on")
-            reopen_tabs = to_bool_local(app_settings.get("reopen_tabs"))
+            reopen_tabs = db.to_bool(app_settings.get("reopen_tabs"))
             
             # Add --restore-last-session flag when reopen_tabs is enabled
             if reopen_tabs:
@@ -391,12 +377,7 @@ class BrowserManager:
         try:
             from . import database as db
             app_settings = db.get_all_settings()
-            def to_bool(val) -> bool:
-                if not val:
-                    return False
-                return str(val).lower() in ("true", "1", "yes", "on")
-                
-            if not to_bool(app_settings.get("auto_clear_cache", "true")):
+            if not db.to_bool(app_settings.get("auto_clear_cache", "true")):
                 return
                 
             profile = db.get_profile(profile_id)
