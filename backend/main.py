@@ -1785,9 +1785,34 @@ async def select_folder():
         raise HTTPException(status_code=400, detail="Hộp thoại chọn thư mục chỉ hỗ trợ trên hệ điều hành Windows.")
         
     ps_script = (
-        "$shell = New-Object -ComObject Shell.Application;"
-        "$folder = $shell.BrowseForFolder(0, 'Chọn thư mục lưu trữ profile', 0, 0);"
-        "if ($folder) { $folder.Self.Path }"
+        "Add-Type -AssemblyName System.Windows.Forms;"
+        "Add-Type -TypeDefinition '"
+        "using System;"
+        "using System.Windows.Forms;"
+        "using System.Runtime.InteropServices;"
+        "public class FolderSelector {"
+        "    [DllImport(\"user32.dll\")]"
+        "    public static extern bool SetForegroundWindow(IntPtr hWnd);"
+        "    public static string Select() {"
+        "        FolderBrowserDialog dialog = new FolderBrowserDialog();"
+        "        dialog.Description = \"Chọn thư mục lưu trữ profile\";"
+        "        Form form = new Form();"
+        "        form.TopMost = true;"
+        "        form.Width = 0;"
+        "        form.Height = 0;"
+        "        form.ShowInTaskbar = false;"
+        "        form.Opacity = 0;"
+        "        form.WindowState = FormWindowState.Minimized;"
+        "        form.Show();"
+        "        form.WindowState = FormWindowState.Normal;"
+        "        SetForegroundWindow(form.Handle);"
+        "        DialogResult result = dialog.ShowDialog(form);"
+        "        form.Close();"
+        "        if (result == DialogResult.OK) { return dialog.SelectedPath; }"
+        "        return \"\";"
+        "    }"
+        "}';"
+        "[FolderSelector]::Select()"
     )
     try:
         result = subprocess.run(
