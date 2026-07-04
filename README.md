@@ -23,6 +23,10 @@ Vì lý do đó, **GPM-CloakBrowser** ra đời. Bằng cách kế thừa sự t
 - **Quản lý Profile Độc Lập:** Mỗi profile có cookie, bộ nhớ cục bộ, lịch sử và cache riêng biệt, hoàn toàn cô lập.
 - **Tự động hóa Vân Tay (Fingerprint Seed):** Cơ chế sinh thông số phần cứng (Canvas, WebGL, Audio, GPU, CPU Cores) tự động dựa trên `fingerprint_seed` độc bản của từng profile, đảm bảo tính tự nhiên tối đa mà không cần tinh chỉnh thủ công phức tạp.
 - **Đồng bộ Vùng Địa Lý (GeoIP):** Tự động phát hiện và đồng bộ hóa múi giờ (`timezone`) và ngôn ngữ (`locale`) dựa trên vị trí địa lý của Proxy IP được gán, giúp tăng điểm tin cậy đối với các hệ thống chống bot.
+- **Nhập/Xuất Cookies & Cấu Hình:** Dễ dàng backup/restore toàn bộ dữ liệu. Hỗ trợ import cookies, giúp bạn chuyển đổi mượt mà cấu hình và cookies từ GPM Login sang GPM-CloakBrowser để sử dụng hàng loạt.
+- **Khởi Tạo Hàng Loạt (Bulk Create):** Tạo hàng chục, hàng trăm profile cùng lúc chỉ trong vài giây với cơ chế tự sinh seed ngẫu nhiên độc bản cho từng profile.
+- **Quản Lý Proxy Tiện Lợi:** Dễ dàng gán proxy (HTTP/Socks5) riêng lẻ hoặc nhập danh sách proxy hàng loạt khi tạo profile.
+- **Cấu HÌnh Bookmarks & URL Khởi Động:** Cài đặt sẵn danh sách dấu trang (Bookmarks) hệ thống và các tab trang web tự động mở mặc định khi bắt đầu khởi chạy trình duyệt.
 - **Tự Động Cập Nhật (Auto Update):** Tự động kiểm tra và nâng cấp mã nguồn CloakBrowser cũng như nhân trình duyệt Chromium tương thích mới nhất khi khởi động GPM-CloakBrowser.
 - **Tự động hóa CDP (Playwright / Puppeteer):** Hỗ trợ đầy đủ giao thức Chrome DevTools Protocol (CDP) giúp bạn dễ dàng kết nối các script tự động hóa để điều khiển trình duyệt.
 - **Xem trực tiếp trong Web (VNC):** Tích hợp VNC trực tiếp trên giao diện quản trị giúp bạn theo dõi và tương tác trực quan với các profile trình duyệt đang chạy.
