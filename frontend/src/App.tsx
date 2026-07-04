@@ -400,6 +400,7 @@ function AppContent({ authRequired, onLogout }: AppContentProps) {
                 showFeedback={showFeedback}
                 useTrash={useTrash}
                 onOpenRecycleBin={() => setRecycleBinOpen(true)}
+                onRefreshProfiles={refresh}
               />
 
               {/* Modal overlay cho Tạo và Sửa profile đơn lẻ */}
