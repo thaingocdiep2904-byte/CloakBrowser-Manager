@@ -1788,7 +1788,9 @@ async def select_folder():
         "[System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms') | Out-Null;"
         "$dialog = New-Object System.Windows.Forms.FolderBrowserDialog;"
         "$dialog.Description = 'Chọn thư mục lưu trữ profile';"
-        "if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { $dialog.SelectedPath }"
+        "$win = New-Object System.Windows.Forms.Form;"
+        "$win.TopMost = $true;"
+        "if ($dialog.ShowDialog($win) -eq [System.Windows.Forms.DialogResult]::OK) { $dialog.SelectedPath }"
     )
     try:
         result = subprocess.run(

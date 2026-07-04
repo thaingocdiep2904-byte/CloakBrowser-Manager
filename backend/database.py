@@ -237,6 +237,7 @@ def _get_profile_by_conn(conn, profile_id: str) -> dict[str, Any] | None:
         return None
     profile = dict(row)
     profile["launch_args"] = json.loads(profile.get("launch_args") or "[]")
+    profile["user_data_dir"] = str(get_profiles_dir() / profile_id)
     tags = conn.execute(
         "SELECT tag, color FROM profile_tags WHERE profile_id = ?",
         (profile_id,),
@@ -257,6 +258,7 @@ def list_profiles() -> list[dict[str, Any]]:
         for row in rows:
             profile = dict(row)
             profile["launch_args"] = json.loads(profile.get("launch_args") or "[]")
+            profile["user_data_dir"] = str(get_profiles_dir() / profile["id"])
             tags = conn.execute(
                 "SELECT tag, color FROM profile_tags WHERE profile_id = ?",
                 (profile["id"],),
@@ -273,6 +275,7 @@ def list_deleted_profiles() -> list[dict[str, Any]]:
         for row in rows:
             profile = dict(row)
             profile["launch_args"] = json.loads(profile.get("launch_args") or "[]")
+            profile["user_data_dir"] = str(get_profiles_dir() / profile["id"])
             tags = conn.execute(
                 "SELECT tag, color FROM profile_tags WHERE profile_id = ?",
                 (profile["id"],),
