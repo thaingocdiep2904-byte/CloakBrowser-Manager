@@ -2,6 +2,12 @@
 
 Hệ thống quản lý profile trình duyệt antidetect chuyên nghiệp, tự lưu trữ (self-hosted), sử dụng nhân trình duyệt **CloakBrowser** (Chromium tùy biến chống phát hiện). Cho phép tạo, quản lý và tự động hóa hàng loạt profile độc lập với các dấu vân tay số độc bản.
 
+<p align="center">
+  <img src="profile.png" width="800" alt="CloakBrowser Manager - Giao diện chính">
+  <br><br>
+  <img src="edit profile.png" width="800" alt="CloakBrowser Manager - Cấu hình Profile">
+</p>
+
 ---
 
 ## 🚀 Tính năng nổi bật
