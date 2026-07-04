@@ -239,8 +239,8 @@ export function SettingsTab({ showFeedback }: SettingsTabProps) {
         {/* Section 1: Storage Path */}
         <div className="space-y-4">
           <div className="flex items-center gap-3">
-            <span className="text-xs font-semibold text-gray-400 w-24">
-              {lang === "vi" ? "Trên PC" : "On PC"}
+            <span className="text-xs font-semibold text-gray-400 w-28">
+              {lang === "vi" ? "Đường dẫn lưu trữ" : "Storage Path"}
             </span>
             <button
               onClick={() => handleSelectFolder("profile_path")}
