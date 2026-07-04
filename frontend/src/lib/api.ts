@@ -295,12 +295,6 @@ export const api = {
       body: JSON.stringify({ profile_ids: ids, layout_type: layoutType }),
     }),
 
-  bulkImport: (profiles: { name: string; proxy?: string; notes?: string }[]) =>
-    request<Profile[]>("/api/profiles/bulk-import", {
-      method: "POST",
-      body: JSON.stringify({ profiles }),
-    }),
-
   openFolder: (id: string) =>
     request<{ ok: boolean }>(`/api/profiles/${id}/open-folder`, { method: "POST" }),
 

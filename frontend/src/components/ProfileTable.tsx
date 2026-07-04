@@ -53,7 +53,6 @@ interface ProfileTableProps {
   onBulkGroup: (ids: string[]) => void;
   onBulkBookmark: (ids: string[]) => void;
   onArrangeWindows: (ids: string[], layoutType: "grid" | "cascade") => Promise<void>;
-  onBulkImport: () => void;
   showFeedback: (msg: string) => void;
   useTrash?: boolean;
   onOpenRecycleBin?: () => void;
@@ -79,7 +78,6 @@ export function ProfileTable({
   onBulkGroup,
   onBulkBookmark,
   onArrangeWindows,
-  onBulkImport,
   showFeedback,
   useTrash = true,
   onOpenRecycleBin,
@@ -267,24 +265,6 @@ export function ProfileTable({
     }
   };
 
-  const handleExportCSV = () => {
-    if (selectedIds.length === 0) return;
-    const selectedProfiles = profiles.filter((p) => selectedIds.includes(p.id));
-    const headers = ["ID", "Tên Profile", "Proxy", "Hệ điều hành", "Ghi chú"];
-    const rows = selectedProfiles.map(p => [p.id, p.name, p.proxy || "", p.platform, p.notes || ""]);
-    const csvContent = "\uFEFF" + [headers.join(","), ...rows.map(e => e.map(val => `"${val.replace(/"/g, '""')}"`).join(","))].join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `profiles_export_${new Date().toISOString().slice(0, 10)}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    showFeedback(lang === "vi" ? `Đã xuất dữ liệu ${selectedIds.length} profile thành công!` : `Successfully exported ${selectedIds.length} profiles!`);
-  };
-
   const handleBulkAction = async (action: string) => {
     if (selectedIds.length === 0) return;
 
@@ -359,12 +339,7 @@ export function ProfileTable({
       case "cache":
         onBulkCacheClear(selectedIds);
         break;
-      case "import_excel":
-        onBulkImport();
-        break;
-      case "export_excel":
-        handleExportCSV();
-        break;
+
       case "cookies":
         await handleBulkExportCookies(selectedIds);
         break;
@@ -556,11 +531,6 @@ export function ProfileTable({
             <span>{t("table.btn_bulk_new")}</span>
           </button>
 
-          <button onClick={() => handleBulkAction("import_excel")} className="btn-menu bg-surface-3 hover:bg-surface-4 border border-border text-gray-200 py-1.5 px-3 text-xs rounded font-medium flex items-center gap-1.5 transition-colors" title="Import profiles">
-            <FolderOpen className="h-3.5 w-3.5 text-blue-500" />
-            <span>{t("table.bulk_import")}</span>
-          </button>
-
           <button onClick={() => setImportPackageOpen(true)} className="btn-menu bg-surface-3 hover:bg-surface-4 border border-border text-gray-200 py-1.5 px-3 text-xs rounded font-medium flex items-center gap-1.5 transition-colors" title={t("table.import_package")}>
             <Upload className="h-3.5 w-3.5 text-emerald-500" />
             <span>{t("table.import_package")}</span>
@@ -738,15 +708,7 @@ export function ProfileTable({
 
           <div className="w-px h-4 bg-border/60 mx-0.5"></div>
 
-          {/* Export Actions */}
-          <button
-            onClick={() => handleBulkAction("export_excel")}
-            disabled={selectedIds.length === 0}
-            className={`btn-bulk-sub ${selectedIds.length === 0 ? "opacity-45 cursor-not-allowed pointer-events-none" : ""}`}
-            title={t("table.bulk_export")}
-          >
-            <span>{t("table.bulk_export")}</span>
-          </button>
+
           <button
             onClick={() => handleBulkAction("cookies")}
             disabled={selectedIds.length === 0}

@@ -11,7 +11,6 @@ import { BulkResetProxyDialog } from "./components/BulkResetProxyDialog";
 import { BulkCacheClearDialog } from "./components/BulkCacheClearDialog";
 import { BulkGroupDialog } from "./components/BulkGroupDialog";
 import { BulkBookmarkDialog } from "./components/BulkBookmarkDialog";
-import { BulkImportDialog } from "./components/BulkImportDialog";
 import { SettingsTab } from "./components/SettingsTab";
 import { ApiTab } from "./components/ApiTab";
 import { AboutTab } from "./components/AboutTab";
@@ -133,7 +132,7 @@ function AppContent({ authRequired, onLogout }: AppContentProps) {
     // Chạy trực tiếp trên desktop thật, không chuyển sang view VNC nữa
     setView("empty");
   }, [launch, osName]);
-  type ActiveBulkModal = "create" | "startup_url" | "reset_proxy" | "cache_clear" | "group" | "bookmark" | "import" | null;
+  type ActiveBulkModal = "create" | "startup_url" | "reset_proxy" | "cache_clear" | "group" | "bookmark" | null;
   const [activeBulkModal, setActiveBulkModal] = useState<ActiveBulkModal>(null);
   const [bulkTargetIds, setBulkTargetIds] = useState<string[]>([]);
 
@@ -167,11 +166,7 @@ function AppContent({ authRequired, onLogout }: AppContentProps) {
     showFeedback(lang === "vi" ? `Đã cập nhật dấu trang cho ${ids.length} profile thành công!` : `Successfully updated bookmarks for ${ids.length} profiles!`);
   }, [refresh, showFeedback, lang]);
 
-  const handleBulkImport = useCallback(async (list: { name: string; proxy?: string; notes?: string }[]) => {
-    await api.bulkImport(list);
-    await refresh();
-    showFeedback(lang === "vi" ? `Đã nhập thành công ${list.length} profile!` : `Successfully imported ${list.length} profiles!`);
-  }, [refresh, showFeedback, lang]);
+
 
   const handleArrangeWindows = useCallback(async (ids: string[], layoutType: "grid" | "cascade") => {
     try {
@@ -396,7 +391,6 @@ function AppContent({ authRequired, onLogout }: AppContentProps) {
                 onBulkGroup={triggerBulkGroup}
                 onBulkBookmark={triggerBulkBookmark}
                 onArrangeWindows={handleArrangeWindows}
-                onBulkImport={() => setActiveBulkModal("import")}
                 showFeedback={showFeedback}
                 useTrash={useTrash}
                 onOpenRecycleBin={() => setRecycleBinOpen(true)}
@@ -483,12 +477,7 @@ function AppContent({ authRequired, onLogout }: AppContentProps) {
         />
       )}
 
-      {activeBulkModal === "import" && (
-        <BulkImportDialog
-          onImport={handleBulkImport}
-          onCancel={() => setActiveBulkModal(null)}
-        />
-      )}
+
 
       {recycleBinOpen && (
         <RecycleBinDialog
