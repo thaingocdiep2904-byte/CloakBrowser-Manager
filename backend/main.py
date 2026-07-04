@@ -258,6 +258,7 @@ async def lifespan(app: FastAPI):
     db.init_db()
     await browser_mgr.cleanup_stale()
     browser_mgr._auto_launch_task = asyncio.create_task(browser_mgr.auto_launch_all())
+    browser_mgr.start_zombie_cleaner()
     
     # Khởi chạy background task update CloakBrowser
     asyncio.create_task(auto_update_cloakbrowser_task())

@@ -21,7 +21,7 @@ export function AboutTab() {
         <div className="bg-gradient-to-r from-primaryScale-900/40 via-surface-1 to-surface-1 border border-border p-8 rounded-xl flex items-center gap-6 shadow-2xl">
           <img src={logoImg} alt="Logo" className="h-16 w-16 rounded-xl object-contain border border-border/60 p-2 flex-shrink-0 bg-surface-2" />
           <div>
-            <h2 className="text-2xl font-extrabold text-white tracking-tight">CloakBrowser Manager</h2>
+            <h2 className="text-2xl font-extrabold text-white tracking-tight">GPM-CloakBrowser</h2>
             <p className="text-xs text-gray-400 mt-1 max-w-lg">
               {lang === "vi" 
                 ? "Hệ thống quản lý profile trình duyệt antidetect, bảo mật dấu vân tay số và tự động hóa đa tài khoản chuyên nghiệp."

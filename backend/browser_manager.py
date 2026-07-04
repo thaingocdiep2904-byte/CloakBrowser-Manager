@@ -229,6 +229,49 @@ class BrowserManager:
         self._lock = asyncio.Lock()
         self._next_cdp_port = BASE_CDP_PORT
         self._auto_launch_task: asyncio.Task | None = None
+        self._zombie_cleaner_task: asyncio.Task | None = None
+
+    def start_zombie_cleaner(self):
+        """Start the background zombie cleaner task inside a running event loop."""
+        self._zombie_cleaner_task = asyncio.create_task(self._zombie_cleaner_loop())
+
+    async def _zombie_cleaner_loop(self):
+        """Periodically scan and kill zombie/orphaned Chromium processes belonging to this app."""
+        await asyncio.sleep(30)
+        while True:
+            try:
+                import psutil
+                for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+                    try:
+                        name = proc.info['name']
+                        if name and name.lower() in ('chrome.exe', 'chrome'):
+                            cmdline = proc.info['cmdline']
+                            if cmdline:
+                                for arg in cmdline:
+                                    if arg.startswith('--user-data-dir='):
+                                        user_data_path = arg.split('=', 1)[1]
+                                        path = Path(user_data_path)
+                                        if path.parent.name == 'profiles':
+                                            profile_id = path.name
+                                            if profile_id not in self.running and profile_id not in self._launching:
+                                                logger.warning(
+                                                    "Detected orphaned Chromium process: PID %d for profile %s. Terminating...",
+                                                    proc.pid, profile_id
+                                                )
+                                                proc.terminate()
+                                                await asyncio.sleep(0.1)
+                                                if proc.is_running():
+                                                    proc.kill()
+                    except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                        continue
+            except ModuleNotFoundError:
+                logger.warning("psutil is not installed. Background zombie process cleaner is disabled.")
+                await asyncio.sleep(600)
+                continue
+            except Exception as e:
+                logger.error("Error in background zombie process cleaner: %s", e)
+            
+            await asyncio.sleep(300)
 
     async def launch(self, profile: dict[str, Any], window_x: int | None = None, window_y: int | None = None) -> RunningProfile:
         """Launch a browser instance for the given profile."""

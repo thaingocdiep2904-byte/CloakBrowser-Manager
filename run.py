@@ -110,7 +110,7 @@ def main():
         input("Nhan Enter de thoat...")
         sys.exit(1)
         
-    print_banner("3. KHOI CHAY CLOAKBROWSER MANAGER")
+    print_banner("3. KHOI CHAY GPM-CLOAKBROWSER")
     
     python_path = VENV_DIR / "Scripts" / "python.exe"
     

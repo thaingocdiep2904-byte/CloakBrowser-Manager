@@ -25,7 +25,7 @@ def to_bool(val: Any) -> bool:
 
 @contextmanager
 def get_db():
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = sqlite3.connect(str(DB_PATH), timeout=30.0)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
@@ -40,6 +40,7 @@ def init_db():
     with get_db() as conn:
         conn.execute("PRAGMA journal_mode=WAL;")
         conn.execute("PRAGMA synchronous=NORMAL;")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_profiles_is_deleted ON profiles(is_deleted);")
         conn.executescript("""
             CREATE TABLE IF NOT EXISTS profiles (
                 id TEXT PRIMARY KEY,

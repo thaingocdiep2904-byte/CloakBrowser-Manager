@@ -153,13 +153,13 @@ asyncio.run(main())`;
                 <ol className="list-decimal list-inside text-xs space-y-1.5 text-gray-400">
                   {lang === "vi" ? (
                     <>
-                      <li>Gửi yêu cầu khởi chạy profile qua endpoint HTTP của CloakBrowser Manager.</li>
+                      <li>Gửi yêu cầu khởi chạy profile qua endpoint HTTP của GPM-CloakBrowser.</li>
                       <li>Lấy thông tin cổng CDP (cổng gán tự động từ <code className="bg-surface-2 px-1 py-0.5 rounded text-gray-300">5100-5199</code>).</li>
                       <li>Kết nối thư viện tự động hóa Playwright/Puppeteer của bạn qua CDP port cục bộ để điều khiển.</li>
                     </>
                   ) : (
                     <>
-                      <li>Send a profile launch request via CloakBrowser Manager HTTP endpoint.</li>
+                      <li>Send a profile launch request via GPM-CloakBrowser HTTP endpoint.</li>
                       <li>Get the CDP port (allocated automatically in the <code className="bg-surface-2 px-1 py-0.5 rounded text-gray-300">5100-5199</code> range).</li>
                       <li>Connect your Playwright/Puppeteer automation library via local CDP port.</li>
                       

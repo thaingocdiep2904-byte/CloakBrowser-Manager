@@ -287,7 +287,7 @@ function AppContent({ authRequired, onLogout }: AppContentProps) {
       <div className="w-[150px] border-r border-border bg-surface-2 flex flex-col py-4 px-2 flex-shrink-0 gap-1 z-10">
         <div className="flex items-center gap-2 px-1 py-2 mb-4 border-b border-border/40 pb-3">
           <img src={logoImg} alt="Logo" className="w-7 h-7 rounded-lg object-contain flex-shrink-0" />
-          <span className="text-white font-bold text-xs tracking-tight leading-tight">CloakBrowser Manager</span>
+          <span className="text-white font-bold text-xs tracking-tight leading-tight">GPM-CloakBrowser</span>
         </div>
 
         {/* Tab 1: Profiles */}
