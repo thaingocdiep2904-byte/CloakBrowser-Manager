@@ -248,13 +248,13 @@ export function SettingsTab({ showFeedback }: SettingsTabProps) {
             >
               {lang === "vi" ? "Thay đổi" : "Change"}
             </button>
-            <span
-              onClick={() => handleSelectFolder("profile_path")}
-              className="text-xs text-gray-300 font-mono bg-surface-1 hover:bg-surface-2 border border-border/40 hover:border-accent/50 px-2 py-1.5 rounded transition-all cursor-pointer select-all"
-              title={lang === "vi" ? "Click để thay đổi thư mục lưu trữ profile" : "Click to change profile storage directory"}
-            >
-              {settings.profile_path || (lang === "vi" ? "Chưa cấu hình (Click để chọn)" : "Not configured (Click to select)")}
-            </span>
+            <input
+              type="text"
+              value={settings.profile_path || ""}
+              onChange={(e) => setSettings((prev) => ({ ...prev, profile_path: e.target.value }))}
+              placeholder={lang === "vi" ? "Chưa cấu hình đường dẫn lưu trữ" : "Not configured storage path"}
+              className="flex-1 max-w-xl h-8 px-3 bg-surface-2 border border-border rounded text-white text-xs font-mono focus:outline-none focus:border-border-hover"
+            />
           </div>
 
 
